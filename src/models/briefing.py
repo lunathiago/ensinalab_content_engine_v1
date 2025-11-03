@@ -19,7 +19,8 @@ class Briefing(Base):
     """
     Tabela de briefings
     
-    Armazena os briefings simplificados enviados pelos gestores
+    Armazena os briefings simplificados enviados pelos gestores escolares
+    para gerar conteúdo de treinamento/capacitação de professores
     """
     __tablename__ = "briefings"
     
@@ -27,15 +28,15 @@ class Briefing(Base):
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=False)
     
-    # Público-alvo
-    target_grade = Column(String(50))  # Ex: "5º ano", "Ensino Médio"
-    target_age_min = Column(Integer)
-    target_age_max = Column(Integer)
+    # Público-alvo (professores)
+    target_audience = Column(String(100))  # Ex: "Professores Iniciantes", "Coordenadores"
+    subject_area = Column(String(100))  # Ex: "Matemática", "Gestão de Sala", "Geral"
+    teacher_experience_level = Column(String(50))  # Ex: "Iniciante", "Intermediário", "Avançado"
     
-    # Detalhes do conteúdo
-    educational_goal = Column(Text)  # Objetivo pedagógico
+    # Detalhes do treinamento
+    training_goal = Column(Text)  # Objetivo do treinamento/capacitação
     duration_minutes = Column(Integer)  # Duração desejada em minutos
-    tone = Column(String(100))  # Ex: "formal", "descontraído", "motivacional"
+    tone = Column(String(100))  # Ex: "formal", "prático", "inspiracional", "técnico"
     
     # Metadata
     status = Column(SQLEnum(BriefingStatus), default=BriefingStatus.PENDING)

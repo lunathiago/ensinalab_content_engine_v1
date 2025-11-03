@@ -5,6 +5,7 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         GESTOR ESCOLAR                              │
+│         Envia briefing de capacitação para professores             │
 │                   (Frontend - não implementado)                     │
 └────────────────────────────┬────────────────────────────────────────┘
                              │
@@ -126,22 +127,23 @@
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         DATABASE SCHEMA                             │
 │                                                                     │
-│  ┌────────────────────────────────────┐                            │
-│  │         Briefing                   │                            │
-│  ├────────────────────────────────────┤                            │
-│  │ id: int (PK)                       │                            │
-│  │ title: string                      │                            │
-│  │ description: text                  │                            │
-│  │ target_grade: string               │                            │
-│  │ target_age_min: int                │                            │
-│  │ target_age_max: int                │                            │
-│  │ educational_goal: text             │                            │
-│  │ duration_minutes: int              │                            │
-│  │ tone: string                       │                            │
-│  │ status: enum (pending, processing, │                            │
-│  │              options_ready, etc)   │                            │
-│  │ created_at: timestamp              │                            │
-│  └────────┬───────────────────────────┘                            │
+  │  ┌────────────────────────────────────┐                            │
+  │  │         Briefing                   │                            │
+  │  │  (Treinamento de Professores)      │                            │
+  │  ├────────────────────────────────────┤                            │
+  │  │ id: int (PK)                       │                            │
+  │  │ title: string                      │                            │
+  │  │ description: text                  │                            │
+  │  │ target_audience: string            │                            │
+  │  │ subject_area: string               │                            │
+  │  │ teacher_experience_level: string   │                            │
+  │  │ training_goal: text                │                            │
+  │  │ duration_minutes: int              │                            │
+  │  │ tone: string                       │                            │
+  │  │ status: enum (pending, processing, │                            │
+  │  │              options_ready, etc)   │                            │
+  │  │ created_at: timestamp              │                            │
+  │  └────────┬───────────────────────────┘                            │
 │           │                                                         │
 │           │ 1:N                                                     │
 │           ↓                                                         │

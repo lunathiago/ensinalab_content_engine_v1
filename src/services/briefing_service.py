@@ -17,10 +17,10 @@ class BriefingService:
         briefing = Briefing(
             title=briefing_data.title,
             description=briefing_data.description,
-            target_grade=briefing_data.target_grade,
-            target_age_min=briefing_data.target_age_min,
-            target_age_max=briefing_data.target_age_max,
-            educational_goal=briefing_data.educational_goal,
+            target_audience=briefing_data.target_audience,
+            subject_area=briefing_data.subject_area,
+            teacher_experience_level=briefing_data.teacher_experience_level,
+            training_goal=briefing_data.training_goal,
             duration_minutes=briefing_data.duration_minutes,
             tone=briefing_data.tone,
             status=BriefingStatus.PENDING

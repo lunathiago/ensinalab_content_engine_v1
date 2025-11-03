@@ -46,10 +46,10 @@ def generate_options(self, briefing_id: int):
         briefing_data = {
             'title': briefing.title,
             'description': briefing.description,
-            'target_grade': briefing.target_grade,
-            'target_age_min': briefing.target_age_min,
-            'target_age_max': briefing.target_age_max,
-            'educational_goal': briefing.educational_goal,
+            'target_audience': briefing.target_audience,
+            'subject_area': briefing.subject_area,
+            'teacher_experience_level': briefing.teacher_experience_level,
+            'training_goal': briefing.training_goal,
             'duration_minutes': briefing.duration_minutes,
             'tone': briefing.tone
         }
@@ -109,7 +109,8 @@ def generate_video(self, video_id: int):
         full_script = llm_service.enhance_script(
             option.script_outline,
             {
-                'target_grade': briefing.target_grade,
+                'target_audience': briefing.target_audience,
+                'subject_area': briefing.subject_area,
                 'duration_minutes': briefing.duration_minutes,
                 'tone': briefing.tone
             }

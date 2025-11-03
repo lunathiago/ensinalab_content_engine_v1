@@ -113,14 +113,14 @@ docker-compose logs -f worker
 curl -X POST "http://localhost:8000/api/v1/briefings" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Fotossíntese para Crianças",
-    "description": "Vídeo explicando fotossíntese de forma lúdica",
-    "target_grade": "6º ano",
-    "target_age_min": 11,
-    "target_age_max": 12,
-    "educational_goal": "Compreender como as plantas produzem energia",
-    "duration_minutes": 3,
-    "tone": "descontraído"
+    "title": "Avaliação Formativa na Prática",
+    "description": "Treinamento sobre como implementar avaliação formativa no dia a dia da sala de aula",
+    "target_audience": "Professores do Ensino Fundamental",
+    "subject_area": "Metodologias de Ensino",
+    "teacher_experience_level": "Intermediário",
+    "training_goal": "Capacitar professores a utilizar técnicas de avaliação formativa para melhorar o aprendizado",
+    "duration_minutes": 5,
+    "tone": "prático"
   }'
 ```
 

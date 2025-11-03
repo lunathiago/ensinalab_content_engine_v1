@@ -1,16 +1,16 @@
 # EnsinaLab Content Engine 🎓🎬
 
-Motor de conteúdos inteligente para gestores escolares - gera vídeos educacionais personalizados a partir de briefings simplificados.
+Motor de conteúdos inteligente para gestores escolares - gera vídeos de treinamento/capacitação de professores personalizados a partir de briefings simplificados.
 
 ## 📋 Visão Geral
 
 O EnsinaLab Content Engine é um sistema backend que:
 
-1. **Recebe briefings simplificados** de gestores escolares
-2. **Processa e filtra** usando IA (LLM + filtros de relevância)
-3. **Gera múltiplas opções** de conteúdo educacional
-4. **Produz vídeos curtos** após aprovação do gestor
-5. **Entrega conteúdo pronto** para uso
+1. **Recebe briefings simplificados** de gestores escolares sobre necessidades de capacitação docente
+2. **Processa e filtra** usando IA (LLM + filtros de relevância e qualidade)
+3. **Gera múltiplas opções** de conteúdo de treinamento para professores
+4. **Produz vídeos curtos de capacitação** após aprovação do gestor
+5. **Entrega conteúdo pronto** para desenvolvimento profissional dos professores
 
 ## 🏗️ Arquitetura
 
@@ -185,14 +185,14 @@ ensinalab_content_engine_v1/
 ```bash
 POST /api/v1/briefings
 {
-  "title": "Vídeo sobre Fotossíntese",
-  "description": "Explicar fotossíntese para alunos do 6º ano",
-  "target_grade": "6º ano",
-  "target_age_min": 11,
-  "target_age_max": 12,
-  "educational_goal": "Compreender o processo de fotossíntese",
-  "duration_minutes": 3,
-  "tone": "descontraído"
+  "title": "Gestão de Sala de Aula - Técnicas Práticas",
+  "description": "Vídeo de capacitação sobre técnicas eficazes de gestão de sala para professores iniciantes",
+  "target_audience": "Professores Iniciantes",
+  "subject_area": "Gestão de Sala",
+  "teacher_experience_level": "Iniciante",
+  "training_goal": "Desenvolver habilidades de gestão comportamental e organização da sala de aula",
+  "duration_minutes": 5,
+  "tone": "prático"
 }
 ```
 
@@ -215,8 +215,8 @@ Retorna:
 [
   {
     "id": 1,
-    "title": "Fotossíntese: A Fábrica das Plantas",
-    "summary": "Vídeo animado explicando...",
+    "title": "5 Técnicas Imediatas para Gestão de Sala",
+    "summary": "Vídeo prático com estratégias comprovadas para estabelecer rotinas e manter o engajamento dos alunos...",
     "relevance_score": 0.92,
     "quality_score": 0.88
   },

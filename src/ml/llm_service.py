@@ -43,30 +43,37 @@ class LLMService:
     
     def _get_system_prompt(self) -> str:
         """Prompt de sistema para o LLM"""
-        return """Você é um especialista em educação brasileira e criação de conteúdo pedagógico.
-Sua tarefa é analisar briefings de gestores escolares e gerar múltiplas opções de conteúdo educacional em vídeo.
+        return """Você é um especialista em formação de professores e desenvolvimento profissional docente no contexto brasileiro.
+Sua tarefa é analisar briefings de gestores escolares e gerar múltiplas opções de conteúdo para TREINAMENTO/CAPACITAÇÃO DE PROFESSORES em formato de vídeo.
 
 Para cada briefing, você deve:
-1. Compreender o objetivo pedagógico
-2. Considerar a faixa etária e série
-3. Gerar 3-5 propostas DIFERENTES de abordagem
-4. Cada proposta deve ter: título, resumo, roteiro esboçado, pontos-chave, tom, duração estimada
+1. Compreender o objetivo do treinamento
+2. Considerar o nível de experiência dos professores
+3. Adaptar a linguagem e profundidade ao público docente
+4. Gerar 3-5 propostas DIFERENTES de abordagem
+5. Cada proposta deve ter: título, resumo, roteiro esboçado, pontos-chave, tom, duração estimada
 
-As propostas devem seguir diretrizes pedagógicas brasileiras (BNCC quando aplicável).
+IMPORTANTE:
+- O público-alvo são PROFESSORES, não alunos
+- Conteúdo deve ser prático, aplicável e baseado em evidências
+- Considerar a realidade das escolas brasileiras
+- Quando aplicável, referenciar BNCC, metodologias ativas, gestão de sala, avaliação formativa, etc.
 """
     
     def _build_options_prompt(self, briefing_data: Dict) -> str:
         """Constrói o prompt para gerar opções"""
         return f"""
-Analise este briefing e gere 3-5 opções diferentes de conteúdo em vídeo:
+Analise este briefing e gere 3-5 opções diferentes de conteúdo em vídeo para TREINAMENTO DE PROFESSORES:
 
-**Briefing:**
+**Briefing de Capacitação Docente:**
 - Título: {briefing_data.get('title')}
 - Descrição: {briefing_data.get('description')}
-- Público: {briefing_data.get('target_grade', 'não especificado')} ({briefing_data.get('target_age_min')}-{briefing_data.get('target_age_max')} anos)
-- Objetivo: {briefing_data.get('educational_goal', 'não especificado')}
+- Público-alvo: {briefing_data.get('target_audience', 'Professores em geral')}
+- Área/Disciplina: {briefing_data.get('subject_area', 'Geral')}
+- Nível de experiência: {briefing_data.get('teacher_experience_level', 'Todos os níveis')}
+- Objetivo do treinamento: {briefing_data.get('training_goal', 'não especificado')}
 - Duração desejada: {briefing_data.get('duration_minutes', 5)} minutos
-- Tom: {briefing_data.get('tone', 'neutro')}
+- Tom: {briefing_data.get('tone', 'prático')}
 
 Gere as opções no seguinte formato JSON:
 ```json
@@ -114,17 +121,20 @@ Gere as opções no seguinte formato JSON:
         Aprimora um roteiro esboçado em roteiro completo
         """
         prompt = f"""
-Expanda este roteiro esboçado em um roteiro completo para narração de vídeo:
+Expanda este roteiro esboçado em um roteiro completo para narração de vídeo de TREINAMENTO DE PROFESSORES:
 
 **Roteiro Esboçado:**
 {script_outline}
 
 **Contexto:**
-- Público: {context.get('target_grade')}
+- Público-alvo: {context.get('target_audience', 'Professores')}
+- Área/Disciplina: {context.get('subject_area', 'Geral')}
 - Duração: {context.get('duration_minutes')} minutos
 - Tom: {context.get('tone')}
 
 Gere um roteiro completo, pronto para narração, dividido em cenas.
+Use linguagem profissional mas acessível, adequada para professores.
+Inclua exemplos práticos e aplicáveis à sala de aula quando relevante.
 """
         
         try:

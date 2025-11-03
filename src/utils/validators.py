@@ -4,19 +4,19 @@ Utilitários de validação
 import re
 from typing import Optional
 
-def validate_grade(grade: str) -> bool:
-    """Valida formato de série/ano escolar"""
-    patterns = [
-        r'^\d+º ano$',  # Ex: "5º ano"
-        r'^Ensino (Fundamental|Médio)$',
-        r'^EJA$',
+def validate_teacher_audience(audience: str) -> bool:
+    """Valida público-alvo de professores"""
+    valid_audiences = [
+        'professores iniciantes',
+        'professores experientes',
+        'coordenadores',
+        'gestores',
+        'todos os professores',
+        'professores do ensino fundamental',
+        'professores do ensino médio',
     ]
     
-    for pattern in patterns:
-        if re.match(pattern, grade, re.IGNORECASE):
-            return True
-    
-    return False
+    return any(valid in audience.lower() for valid in valid_audiences)
 
 def sanitize_filename(filename: str) -> str:
     """Remove caracteres inválidos de nome de arquivo"""

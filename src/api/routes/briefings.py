@@ -18,12 +18,14 @@ async def create_briefing(
     db: Session = Depends(get_db)
 ):
     """
-    Cria um novo briefing
+    Cria um novo briefing para treinamento de professores
     
-    O gestor envia:
-    - Título/tema do conteúdo
-    - Público-alvo (série, idade)
-    - Objetivo pedagógico
+    O gestor escolar envia:
+    - Título/tema do treinamento
+    - Público-alvo (professores iniciantes, coordenadores, etc)
+    - Área/disciplina
+    - Nível de experiência dos professores
+    - Objetivo do treinamento
     - Duração desejada
     - Tom/estilo
     """

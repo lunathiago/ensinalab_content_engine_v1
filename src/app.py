@@ -8,7 +8,7 @@ from src.api.routes import briefings, options, videos, health
 
 app = FastAPI(
     title="EnsinaLab Content Engine API",
-    description="Motor de conteúdos para gestores escolares - gera vídeos educacionais personalizados",
+    description="Motor de conteúdos para gestores escolares - gera vídeos de treinamento/capacitação de professores personalizados",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc"
