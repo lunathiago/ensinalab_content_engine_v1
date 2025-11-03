@@ -73,6 +73,7 @@ async def get_video_status(
     Status possíveis:
     - queued: Na fila
     - processing: Sendo gerado
+    - pending_approval: Aguardando aprovação humana
     - completed: Pronto
     - failed: Erro na geração
     """
@@ -86,5 +87,84 @@ async def get_video_status(
         "video_id": video.id,
         "status": video.status,
         "progress": video.progress,
-        "message": video.error_message if video.status == "failed" else None
+        "message": video.error_message if video.status == "failed" else None,
+        "awaiting_approval": video.status == "pending_approval"
+    }
+
+
+@router.post("/videos/{video_id}/approve")
+async def approve_video(
+    video_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Aprova um vídeo que está aguardando revisão humana
+    
+    Retoma o workflow LangGraph para finalizar a geração
+    """
+    from src.workers.tasks import resume_video_generation
+    
+    service = VideoService(db)
+    video = service.get_video(video_id)
+    
+    if not video:
+        raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+    
+    if video.status != "pending_approval":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Vídeo não está aguardando aprovação. Status: {video.status}"
+        )
+    
+    # Disparar task para retomar geração
+    task = resume_video_generation.delay(video_id=video_id, approved=True)
+    
+    return {
+        "video_id": video_id,
+        "message": "Vídeo aprovado. Retomando geração...",
+        "task_id": task.id
+    }
+
+
+@router.post("/videos/{video_id}/reject")
+async def reject_video(
+    video_id: int,
+    feedback: str = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Rejeita um vídeo e solicita revisão
+    
+    Args:
+        video_id: ID do vídeo
+        feedback: Feedback opcional para melhorias
+    
+    O workflow voltará para o estágio de enhancement com o feedback
+    """
+    from src.workers.tasks import resume_video_generation
+    
+    service = VideoService(db)
+    video = service.get_video(video_id)
+    
+    if not video:
+        raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+    
+    if video.status != "pending_approval":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Vídeo não está aguardando aprovação. Status: {video.status}"
+        )
+    
+    # Disparar task para retomar geração com feedback
+    task = resume_video_generation.delay(
+        video_id=video_id, 
+        approved=False,
+        feedback=feedback
+    )
+    
+    return {
+        "video_id": video_id,
+        "message": "Vídeo rejeitado. Aplicando feedback e regenerando...",
+        "task_id": task.id,
+        "feedback": feedback
     }

@@ -193,14 +193,90 @@ ps aux | grep celery
 
 ---
 
-## 📚 Próximos Passos
+## 🤖 Testar LangGraph Workflows
 
-1. Configurar TTS real (ElevenLabs/Polly)
-2. Implementar RAG com base de conhecimento
-3. Customizar templates visuais dos vídeos
-4. Adicionar autenticação JWT
-5. Configurar CI/CD
+### Executar testes dos workflows
+```bash
+# Testar workflows multi-agent, refinement e state machine
+python scripts/test_workflows.py
+```
+
+### Testar workflows individuais
+
+**1. Multi-Agent Briefing Analysis:**
+```python
+from src.workflows.briefing_workflow import BriefingAnalysisWorkflow
+
+workflow = BriefingAnalysisWorkflow()
+result = workflow.run({
+    'title': 'Gestão de Conflitos',
+    'description': 'Como mediar conflitos em sala',
+    'target_audience': 'Professores',
+    'subject_area': 'Gestão',
+    'teacher_experience_level': 'intermediário',
+    'training_goal': 'Mediar conflitos',
+    'duration_minutes': 8,
+    'tone': 'empático'
+})
+
+print(f"Opções: {len(result['ranked_options'])}")
+```
+
+**2. Content Refinement:**
+```python
+from src.workflows.refinement_workflow import ContentRefinementWorkflow
+
+workflow = ContentRefinementWorkflow()
+result = workflow.run(
+    content="Roteiro inicial sobre gestão...",
+    content_type="script",
+    target_quality=0.85
+)
+
+print(f"Qualidade: {result['quality']:.2f}")
+print(f"Iterações: {result['metadata']['iterations']}")
+```
+
+**3. Human-in-the-Loop (via API):**
+```bash
+# Criar vídeo (vai pausar para aprovação)
+curl -X POST "http://localhost:8000/api/v1/options/1/select"
+
+# Verificar status
+curl http://localhost:8000/api/v1/videos/1/status
+# → {"status": "pending_approval", "awaiting_approval": true}
+
+# Aprovar
+curl -X POST "http://localhost:8000/api/v1/videos/1/approve"
+
+# OU Rejeitar com feedback
+curl -X POST "http://localhost:8000/api/v1/videos/1/reject" \
+  -H "Content-Type: application/json" \
+  -d '{"feedback": "Melhorar introdução"}'
+```
+
+### Documentação completa
+Veja **[LANGGRAPH_WORKFLOWS.md](./LANGGRAPH_WORKFLOWS.md)** para:
+- Arquitetura detalhada dos 4 workflows
+- Exemplos de código completos
+- Configuração de checkpointing
+- Troubleshooting
 
 ---
 
-**Problemas?** Abra uma issue ou consulte a documentação completa no README.md
+## 📚 Próximos Passos
+
+1. Testar workflows LangGraph (ver acima)
+2. Configurar TTS real (ElevenLabs/Polly)
+3. Implementar RAG com base de conhecimento
+4. Customizar templates visuais dos vídeos
+5. Adicionar autenticação JWT
+6. Dashboard de monitoramento de workflows
+7. Configurar CI/CD
+
+---
+
+**Problemas?** Abra uma issue ou consulte:
+- [README.md](./README.md) - Documentação principal
+- [LANGGRAPH_WORKFLOWS.md](./LANGGRAPH_WORKFLOWS.md) - Workflows LangGraph
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitetura técnica

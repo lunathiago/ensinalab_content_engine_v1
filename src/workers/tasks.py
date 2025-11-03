@@ -1,5 +1,5 @@
 """
-Tasks assíncronas do Celery
+Tasks assíncronas do Celery com integração LangGraph
 """
 from celery import Task
 from src.workers.celery_config import celery_app
@@ -14,6 +14,11 @@ from src.ml.filters import ContentFilter
 from src.video.tts import TTSService
 from src.video.generator import VideoGenerator
 
+# LangGraph Workflows
+from src.workflows.briefing_workflow import BriefingAnalysisWorkflow
+from src.workflows.video_workflow import VideoGenerationWorkflow
+from src.workflows.refinement_workflow import ContentRefinementWorkflow
+
 class DatabaseTask(Task):
     """Base task com sessão de banco de dados"""
     
@@ -25,10 +30,12 @@ class DatabaseTask(Task):
 @celery_app.task(base=DatabaseTask, bind=True)
 def generate_options(self, briefing_id: int):
     """
-    Task para gerar opções de conteúdo a partir de um briefing
+    Task para gerar opções de conteúdo usando Multi-Agent Workflow (LangGraph)
+    
+    Pipeline: Analyzer → Generator → Filter → Ranker
     """
     try:
-        print(f"🔄 Gerando opções para briefing {briefing_id}...")
+        print(f"🔄 Gerando opções com LangGraph para briefing {briefing_id}...")
         
         # Obter briefing
         briefing_service = BriefingService(self.db)
@@ -41,8 +48,7 @@ def generate_options(self, briefing_id: int):
         # Atualizar status
         briefing_service.update_status(briefing_id, BriefingStatus.PROCESSING)
         
-        # Gerar opções com LLM
-        llm_service = LLMService()
+        # Preparar input para workflow
         briefing_data = {
             'title': briefing.title,
             'description': briefing.description,
@@ -54,26 +60,34 @@ def generate_options(self, briefing_id: int):
             'tone': briefing.tone
         }
         
-        raw_options = llm_service.generate_options(briefing_data)
+        # 🤖 Executar Multi-Agent Workflow
+        workflow = BriefingAnalysisWorkflow()
+        result = workflow.run(briefing_data)
         
-        # Aplicar filtros
-        content_filter = ContentFilter()
-        filtered_options = content_filter.apply_filters(raw_options, briefing_data)
+        if not result['success']:
+            raise Exception("Multi-agent workflow falhou")
+        
+        ranked_options = result['ranked_options']
         
         # Salvar opções no banco
         option_service = OptionService(self.db)
-        for option_data in filtered_options:
+        for i, option_data in enumerate(ranked_options):
+            # Adicionar metadata do workflow
             option_data['briefing_id'] = briefing_id
+            option_data['rank'] = i + 1
+            option_data['quality_score'] = option_data.get('score', 0.0)
+            
             option_service.create_option(option_data)
         
         # Atualizar status
         briefing_service.update_status(briefing_id, BriefingStatus.OPTIONS_READY)
         
-        print(f"✅ {len(filtered_options)} opções geradas para briefing {briefing_id}")
+        print(f"✅ {len(ranked_options)} opções geradas (multi-agent) para briefing {briefing_id}")
         
         return {
             "briefing_id": briefing_id,
-            "options_count": len(filtered_options)
+            "options_count": len(ranked_options),
+            "metadata": result['metadata']
         }
         
     except Exception as e:
@@ -84,10 +98,13 @@ def generate_options(self, briefing_id: int):
 @celery_app.task(base=DatabaseTask, bind=True)
 def generate_video(self, video_id: int):
     """
-    Task para gerar vídeo a partir de uma opção selecionada
+    Task para gerar vídeo usando State Machine Workflow (LangGraph)
+    
+    Pipeline: Analyze → Enhance → Generate Audio → Generate Video → Review → Await Approval → Finalize
+    Suporta checkpointing e human-in-the-loop
     """
     try:
-        print(f"🎬 Gerando vídeo {video_id}...")
+        print(f"🎬 Gerando vídeo {video_id} com LangGraph State Machine...")
         
         # Obter vídeo e opção
         video_service = VideoService(self.db)
@@ -103,56 +120,67 @@ def generate_video(self, video_id: int):
         option = video.option
         briefing = option.briefing
         
-        # 1. Aprimorar roteiro
-        print("📝 Aprimorando roteiro...")
-        llm_service = LLMService()
-        full_script = llm_service.enhance_script(
-            option.script_outline,
-            {
+        # Preparar input para workflow
+        input_data = {
+            "script_outline": option.script_outline,
+            "briefing": {
                 'target_audience': briefing.target_audience,
                 'subject_area': briefing.subject_area,
                 'duration_minutes': briefing.duration_minutes,
-                'tone': briefing.tone
-            }
-        )
-        video_service.update_status(video_id, VideoStatus.PROCESSING, progress=0.3)
-        
-        # 2. Gerar áudio (TTS)
-        print("🎤 Gerando áudio...")
-        tts_service = TTSService()
-        audio_path = tts_service.generate_audio(full_script, video_id=video_id)
-        video_service.update_status(video_id, VideoStatus.PROCESSING, progress=0.5)
-        
-        # 3. Gerar vídeo
-        print("🎥 Gerando vídeo...")
-        video_generator = VideoGenerator()
-        result = video_generator.generate_video(
-            script=full_script,
-            audio_path=audio_path,
-            metadata={
-                'title': option.title,
-                'duration': option.estimated_duration
+                'tone': briefing.tone,
+                'title': option.title
             },
-            video_id=video_id
-        )
-        video_service.update_status(video_id, VideoStatus.PROCESSING, progress=0.9)
-        
-        # 4. Finalizar
-        video_service.complete_video(
-            video_id=video_id,
-            file_path=result['file_path'],
-            file_size=result['file_size'],
-            duration=result['duration'],
-            thumbnail_path=result.get('thumbnail_path')
-        )
-        
-        print(f"✅ Vídeo {video_id} gerado com sucesso!")
-        
-        return {
-            "video_id": video_id,
-            "file_path": result['file_path'],
-            "duration": result['duration']
+            "video_id": video_id
         }
+        
+        # 🎯 Executar Video Generation State Machine
+        workflow = VideoGenerationWorkflow()
+        result = workflow.run(input_data, video_id=video_id)
+        
+        # Verificar se precisa de aprovação humana
+        if result['status'] == 'awaiting_approval':
+            print(f"⏸️  Vídeo {video_id} aguardando aprovação humana")
+            video_service.update_status(
+                video_id, 
+                VideoStatus.PENDING_APPROVAL,
+                progress=0.8
+            )
+            
+            # Salvar checkpoint_id para poder retomar depois
+            video.metadata = video.metadata or {}
+            video.metadata['checkpoint_id'] = result['checkpoint_id']
+            self.db.commit()
+            
+            return {
+                "video_id": video_id,
+                "status": "awaiting_approval",
+                "checkpoint_id": result['checkpoint_id'],
+                "preview_path": result.get('preview_path')
+            }
+        
+        # Processar resultado final
+        if result['success']:
+            video_service.update_status(video_id, VideoStatus.PROCESSING, progress=0.9)
+            
+            # Finalizar
+            video_service.complete_video(
+                video_id=video_id,
+                file_path=result['file_path'],
+                file_size=result.get('file_size', 0),
+                duration=result.get('duration', 0),
+                thumbnail_path=result.get('thumbnail_path')
+            )
+            
+            print(f"✅ Vídeo {video_id} gerado com sucesso (state machine)!")
+            
+            return {
+                "video_id": video_id,
+                "file_path": result['file_path'],
+                "duration": result['duration'],
+                "metadata": result['metadata']
+            }
+        else:
+            raise Exception(f"Workflow falhou: {result.get('error')}")
         
     except Exception as e:
         print(f"❌ Erro ao gerar vídeo: {e}")
@@ -161,4 +189,104 @@ def generate_video(self, video_id: int):
             VideoStatus.FAILED, 
             error_message=str(e)
         )
+        raise
+
+
+@celery_app.task(base=DatabaseTask, bind=True)
+def resume_video_generation(self, video_id: int, approved: bool, feedback: str = None):
+    """
+    Task para retomar geração de vídeo após aprovação/rejeição humana
+    
+    Args:
+        video_id: ID do vídeo
+        approved: True se aprovado, False se rejeitado
+        feedback: Feedback opcional para revisão
+    """
+    try:
+        print(f"▶️  Retomando geração do vídeo {video_id} (aprovado={approved})...")
+        
+        # Obter vídeo
+        video_service = VideoService(self.db)
+        video = video_service.get_video(video_id)
+        
+        if not video:
+            print(f"❌ Vídeo {video_id} não encontrado")
+            return
+        
+        # Obter checkpoint_id
+        checkpoint_id = video.metadata.get('checkpoint_id') if video.metadata else None
+        
+        if not checkpoint_id:
+            raise Exception("Checkpoint não encontrado para retomar workflow")
+        
+        # Retomar workflow
+        workflow = VideoGenerationWorkflow()
+        result = workflow.resume(
+            checkpoint_id=checkpoint_id,
+            approved=approved,
+            feedback=feedback
+        )
+        
+        # Processar resultado
+        if result['success']:
+            video_service.complete_video(
+                video_id=video_id,
+                file_path=result['file_path'],
+                file_size=result.get('file_size', 0),
+                duration=result.get('duration', 0),
+                thumbnail_path=result.get('thumbnail_path')
+            )
+            
+            print(f"✅ Vídeo {video_id} finalizado após aprovação!")
+            
+            return {
+                "video_id": video_id,
+                "file_path": result['file_path']
+            }
+        else:
+            raise Exception(f"Retomada falhou: {result.get('error')}")
+        
+    except Exception as e:
+        print(f"❌ Erro ao retomar vídeo: {e}")
+        video_service.update_status(
+            video_id, 
+            VideoStatus.FAILED, 
+            error_message=str(e)
+        )
+        raise
+
+
+@celery_app.task(base=DatabaseTask, bind=True)
+def refine_content(self, content: str, content_type: str = "script", target_quality: float = 0.85):
+    """
+    Task para refinar conteúdo iterativamente usando Refinement Workflow
+    
+    Args:
+        content: Conteúdo inicial
+        content_type: Tipo de conteúdo ('script', 'outline', 'summary')
+        target_quality: Qualidade alvo (0-1)
+    
+    Returns:
+        Conteúdo refinado e metadata
+    """
+    try:
+        print(f"🔧 Refinando {content_type}...")
+        
+        # 🔄 Executar Refinement Cycle Workflow
+        workflow = ContentRefinementWorkflow()
+        result = workflow.run(
+            content=content,
+            content_type=content_type,
+            target_quality=target_quality,
+            max_iterations=5
+        )
+        
+        if result['success']:
+            print(f"✅ Refinamento concluído: qualidade {result['quality']:.2f}")
+            return result
+        else:
+            raise Exception("Refinamento não convergiu")
+        
+    except Exception as e:
+        print(f"❌ Erro ao refinar conteúdo: {e}")
         raise

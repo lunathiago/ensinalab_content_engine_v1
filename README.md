@@ -259,15 +259,76 @@ pytest --cov=src tests/
 
 ## 🔧 Tecnologias Utilizadas
 
+### Backend & API
 - **FastAPI**: Framework web moderno e rápido
 - **SQLAlchemy**: ORM para banco de dados
 - **PostgreSQL**: Banco de dados relacional
 - **Celery**: Processamento assíncrono
 - **Redis**: Message broker e cache
+- **Pydantic**: Validação de dados
+
+### IA & Machine Learning
 - **OpenAI GPT-4**: Geração de conteúdo
+- **LangGraph**: Workflows multi-agent e state machines
+- **LangChain**: Framework de IA para LLMs
+- **LangSmith**: Observabilidade e debugging (opcional)
+
+### Geração de Vídeo
 - **MoviePy**: Geração de vídeos
 - **FFmpeg**: Processamento de mídia
-- **Pydantic**: Validação de dados
+- **Text-to-Speech**: Conversão texto-áudio
+
+## 🤖 LangGraph Workflows
+
+Este projeto utiliza **4 workflows avançados** com LangGraph:
+
+### 1. Multi-Agent Briefing Analysis
+Pipeline com 4 agentes especializados:
+- **Analyzer**: Analisa briefing e extrai intenções
+- **Generator**: Gera 3-5 opções criativas
+- **Filter**: Aplica filtros de qualidade e segurança
+- **Ranker**: Ranqueia por relevância
+
+```python
+Analyzer → Generator → Filter → Ranker
+```
+
+### 2. Video Generation State Machine
+Máquina de estados com 7 estados e checkpointing:
+- Analyze → Enhance → Generate Audio → Generate Video
+- Review → Await Approval → Finalize
+
+```python
+# Suporta pausar e retomar
+workflow.run(data, video_id=123)
+workflow.resume(checkpoint_id, approved=True)
+```
+
+### 3. Human-in-the-Loop
+Sistema de aprovação humana com persistência:
+- Workflow pausa em pontos estratégicos
+- Estado salvo em SQLite (checkpointing)
+- API permite aprovar/rejeitar vídeos
+- Retomada automática após decisão
+
+**Endpoints:**
+- `POST /api/v1/videos/{id}/approve` - Aprova vídeo
+- `POST /api/v1/videos/{id}/reject` - Rejeita com feedback
+
+### 4. Iterative Content Refinement
+Ciclo automático de melhoria:
+- Avalia qualidade (0-1)
+- Refina conteúdo baseado em feedback
+- Repete até atingir qualidade alvo
+- Máximo de 5 iterações
+
+```
+Evaluate → (quality OK?) → Complete
+    ↑            ↓ No
+    └───── Refine
+```
+
+**📖 Veja documentação completa:** [LANGGRAPH_WORKFLOWS.md](./LANGGRAPH_WORKFLOWS.md)
 
 ## 📊 Endpoints Principais
 
