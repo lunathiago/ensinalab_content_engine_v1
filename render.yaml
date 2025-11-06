@@ -1,0 +1,133 @@
+# Configuração do Render para EnsinaLab Content Engine
+# Este arquivo diz ao Render como rodar sua aplicação
+
+services:
+  # ============================================================================
+  # SERVIÇO 1: API FastAPI (o servidor principal)
+  # ============================================================================
+  - type: web
+    name: ensinalab-api
+    runtime: python
+    plan: free  # Plano grátis! 🎉
+    
+    # Comando para instalar dependências
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    
+    # Comando para iniciar a API
+    startCommand: uvicorn src.main:app --host 0.0.0.0 --port $PORT
+    
+    # Variáveis de ambiente (configurações)
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.9.16"
+      
+      - key: OPENAI_API_KEY
+        sync: false  # Você vai adicionar isso manualmente no painel
+      
+      - key: OPENAI_MODEL
+        value: "gpt-3.5-turbo"  # Modelo mais barato
+      
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ensinalab-db
+          property: connectionString  # Pega a URL do banco automaticamente
+      
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ensinalab-redis
+          property: connectionString  # Pega a URL do Redis automaticamente
+      
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: ensinalab-redis
+          property: connectionString
+      
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: ensinalab-redis
+          property: connectionString
+    
+    # Verificação de saúde (Render testa se a API está funcionando)
+    healthCheckPath: /health
+    
+    # Auto-deploy quando você fizer push no GitHub
+    autoDeploy: true
+
+  # ============================================================================
+  # SERVIÇO 2: Celery Worker (processa vídeos em background)
+  # ============================================================================
+  - type: worker
+    name: ensinalab-worker
+    runtime: python
+    plan: free  # Também grátis! 🎉
+    
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    
+    # Comando para iniciar o worker
+    startCommand: celery -A src.workers.celery_config worker --loglevel=info --concurrency=2
+    
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.9.16"
+      
+      - key: OPENAI_API_KEY
+        sync: false
+      
+      - key: OPENAI_MODEL
+        value: "gpt-3.5-turbo"
+      
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ensinalab-db
+          property: connectionString
+      
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ensinalab-redis
+          property: connectionString
+      
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: ensinalab-redis
+          property: connectionString
+      
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: ensinalab-redis
+          property: connectionString
+    
+    autoDeploy: true
+
+# ==============================================================================
+# BANCO DE DADOS: PostgreSQL
+# ==============================================================================
+databases:
+  - name: ensinalab-db
+    databaseName: ensinalab_content
+    plan: free  # Grátis por 90 dias, depois $7/mês
+    
+    # Script para criar tabelas automaticamente após criar o banco
+    postCreateCommand: |
+      apt-get update && apt-get install -y python3-pip
+      pip3 install -r requirements.txt
+      python3 scripts/create_tables.py
+
+# ==============================================================================
+# REDIS: Cache e fila de mensagens
+# ==============================================================================
+services:
+  - type: redis
+    name: ensinalab-redis
+    plan: free  # 25MB grátis (suficiente para começar)
+    maxmemoryPolicy: allkeys-lru  # Remove itens antigos quando encher
+    ipAllowList: []  # Permite acesso de qualquer lugar (seguro no Render)
