@@ -12,6 +12,7 @@ services:
     
     # Comandos de build e start
     buildCommand: |
+      python --version
       pip install --upgrade pip
       pip install -r requirements.txt
     
@@ -54,6 +55,7 @@ services:
     plan: free
     
     buildCommand: |
+      python --version
       pip install --upgrade pip
       pip install -r requirements.txt
     
