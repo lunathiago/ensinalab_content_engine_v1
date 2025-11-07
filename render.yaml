@@ -20,7 +20,7 @@ services:
     # Variáveis de ambiente
     envVars:
       - key: PYTHON_VERSION
-        value: "3.9.16"
+        value: "3.10"
       
       - key: OPENAI_API_KEY
         sync: false  # Você vai adicionar isso manualmente no dashboard
@@ -61,7 +61,7 @@ services:
     
     envVars:
       - key: PYTHON_VERSION
-        value: "3.9.16"
+        value: "3.10"
       
       - key: OPENAI_API_KEY
         sync: false
