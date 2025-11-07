@@ -28,4 +28,4 @@ RUN mkdir -p /app/uploads /app/videos
 EXPOSE 8000
 
 # Comando padrão
-CMD ["python", "-m", "src.main"]
+CMD ["python", "-m", "src.app"]
