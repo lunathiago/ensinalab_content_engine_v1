@@ -1,7 +1,7 @@
 """
 Model Option - representa uma opção de conteúdo gerada pelo motor
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, Float, ForeignKey, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from src.config.database import Base
@@ -37,7 +37,10 @@ class Option(Base):
     is_selected = Column(Boolean, default=False)
     selection_notes = Column(Text)  # Notas do gestor ao selecionar
     
-    # Metadata
+    # Metadata (dados extras dos agentes LLM, scores adicionais, etc.)
+    metadata = Column(JSON)  # JSON com dados extras: alignment_score, rank, etc.
+    
+    # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relacionamentos

@@ -71,13 +71,12 @@ class OptionService:
 
         sanitized = {k: v for k, v in option_data.items() if k in allowed_fields}
 
-        # Se existirem campos extras, logar para diagnóstico
+        # Campos extras vão para metadata
         extra_keys = set(option_data.keys()) - set(sanitized.keys())
         if extra_keys:
-            try:
-                print(f"⚠️  Campos extras descartados ao criar Option: {sorted(list(extra_keys))}")
-            except Exception:
-                pass
+            metadata = {k: option_data[k] for k in extra_keys}
+            sanitized['metadata'] = metadata
+            print(f"ℹ️  Campos extras salvos em metadata: {sorted(list(extra_keys))}")
 
         option = Option(**sanitized)
         self.db.add(option)
