@@ -6,6 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.config.settings import settings
 from src.api.routes import briefings, options, videos, health
 
+# Importar models para registrá-los no SQLAlchemy Base
+from src.models.briefing import Briefing
+from src.models.option import Option
+from src.models.video import Video
+
 app = FastAPI(
     title="EnsinaLab Content Engine API",
     description="Motor de conteúdos para gestores escolares - gera vídeos de treinamento/capacitação de professores personalizados",
