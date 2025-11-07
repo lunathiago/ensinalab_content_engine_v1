@@ -30,9 +30,9 @@ class BriefingService:
         self.db.commit()
         self.db.refresh(briefing)
         
-        # TODO: Disparar task Celery para gerar opções
-        # from src.workers.tasks import generate_options
-        # generate_options.delay(briefing.id)
+        # Disparar task Celery para gerar opções
+        from src.workers.tasks import generate_options
+        generate_options.delay(briefing.id)
         
         return briefing
     
