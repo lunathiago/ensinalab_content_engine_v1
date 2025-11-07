@@ -62,7 +62,24 @@ class OptionService:
     
     def create_option(self, option_data: dict) -> Option:
         """Cria uma nova opção (usado pelo motor de geração)"""
-        option = Option(**option_data)
+        # Filtrar campos inválidos antes de criar instância de Option
+        allowed_fields = {
+            'briefing_id', 'title', 'summary', 'script_outline', 'key_points',
+            'estimated_duration', 'tone', 'approach', 'relevance_score',
+            'quality_score', 'is_selected', 'selection_notes'
+        }
+
+        sanitized = {k: v for k, v in option_data.items() if k in allowed_fields}
+
+        # Se existirem campos extras, logar para diagnóstico
+        extra_keys = set(option_data.keys()) - set(sanitized.keys())
+        if extra_keys:
+            try:
+                print(f"⚠️  Campos extras descartados ao criar Option: {sorted(list(extra_keys))}")
+            except Exception:
+                pass
+
+        option = Option(**sanitized)
         self.db.add(option)
         self.db.commit()
         self.db.refresh(option)
