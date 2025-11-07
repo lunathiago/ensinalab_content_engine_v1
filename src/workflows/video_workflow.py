@@ -6,7 +6,7 @@ Estados: análise → geração → revisão → aprovação → produção
 from typing import Dict, Literal
 from datetime import datetime
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.memory import MemorySaver
 from src.workflows.states import VideoGenerationState
 from src.ml.llm_service import LLMService
 from src.video.tts import TTSService
@@ -22,8 +22,8 @@ class VideoGenerationWorkflow:
         self.tts_service = TTSService()
         self.video_generator = VideoGenerator()
         
-        # Checkpointer para salvar estado
-        self.checkpointer = SqliteSaver.from_conn_string(checkpointer_path)
+        # Checkpointer para salvar estado (usando MemorySaver para compatibilidade)
+        self.checkpointer = MemorySaver()
         
         # Criar grafo
         self.graph = self._build_graph()
