@@ -62,12 +62,12 @@ def generate_options(self, briefing_id: int):
         
         # 🤖 Executar Multi-Agent Workflow
         workflow = BriefingAnalysisWorkflow()
-        result = workflow.run(briefing_data)
+        result = workflow.run(briefing_id, briefing_data)
         
         if not result['success']:
             raise Exception("Multi-agent workflow falhou")
         
-        ranked_options = result['ranked_options']
+        ranked_options = result['options']
         
         # Salvar opções no banco
         option_service = OptionService(self.db)
