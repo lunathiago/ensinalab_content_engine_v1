@@ -34,8 +34,10 @@ langsmith>=0.1.0
 
 # Video generation
 moviepy==1.0.3
-Pillow==10.1.0
-numpy==1.26.2
+# Allow newer Pillow releases compatible with MoviePy/ImageIO (avoid strict pin)
+Pillow>=10.1.0,<12
+# Keep numpy in a compatible range; MoviePy requires numpy>=1.17.3
+numpy>=1.26.2,<1.27
 
 # TTS (escolher uma opção)
 # elevenlabs==0.2.27  # ElevenLabs TTS
