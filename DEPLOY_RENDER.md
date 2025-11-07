@@ -1,269 +1,343 @@
-# 🚀 Guia Completo de Deploy no Render
+# 🚀 Guia Completo de Deploy no Render.com
 
-## 📝 Pré-requisitos (coisas que você precisa ter)
+## 📖 O que é o Render?
 
-1. ✅ Conta no GitHub (gratuita)
-2. ✅ Conta no Render (gratuita)
-3. ✅ API Key da OpenAI (você precisa pagar conforme usar)
-4. ✅ Git instalado no seu computador
+Render é uma plataforma que **hospeda sua aplicação na nuvem**. Pense nele como um computador sempre ligado na internet que roda seu código.
 
----
-
-## 🎬 Passo a Passo Completo
-
-### **PASSO 1: Criar conta no Render** ⏱️ 2 minutos
-
-1. Acesse: https://render.com
-2. Clique em **"Get Started for Free"**
-3. Escolha **"Sign up with GitHub"** (mais fácil)
-4. Autorize o Render a acessar seus repositórios
-
-**O que acontece:** O Render vai se conectar ao seu GitHub para poder pegar o código.
+**Analogia:** É como alugar um espaço no shopping (Render) para sua loja (aplicação).
 
 ---
 
-### **PASSO 2: Subir código para o GitHub** ⏱️ 5 minutos
+## 💰 Custos
 
-Se você **ainda não tem** o código no GitHub:
+| Período | Custo | O que está incluído |
+|---------|-------|---------------------|
+| **Meses 1-3** | **$0/mês** | API + Worker + PostgreSQL + Redis grátis |
+| **Mês 4+** | **$7/mês** | Só PostgreSQL pago, resto continua grátis |
+| **Produção** | **$21/mês** | Se precisar de mais recursos |
 
-```bash
-# 1. Abrir terminal na pasta do projeto
-cd /workspaces/ensinalab_content_engine_v1
+**Observação:** OpenAI API cobra separado (~$5-10/mês para 100 vídeos com GPT-3.5)
 
-# 2. Inicializar Git (se ainda não fez)
-git init
+---
 
-# 3. Adicionar todos os arquivos
-git add .
+## 🎯 PASSO 1: Criar Conta no Render
 
-# 4. Fazer primeiro commit
-git commit -m "Initial commit - EnsinaLab Content Engine"
-
-# 5. Criar repositório no GitHub
-# Acesse: https://github.com/new
-# Nome: ensinalab_content_engine_v1
-# Deixe privado se preferir
-# NÃO marque "Initialize with README"
-
-# 6. Conectar seu código local ao GitHub
-git remote add origin https://github.com/SEU_USUARIO/ensinalab_content_engine_v1.git
-
-# 7. Enviar código para o GitHub
-git branch -M main
-git push -u origin main
+### 1.1 Acessar o site
+```
+🌐 Abra: https://render.com
 ```
 
-**O que acontece:** Seu código sai do seu computador e vai para o GitHub (como uma cópia de segurança).
+### 1.2 Clicar em "Get Started" ou "Sign Up"
+
+### 1.3 Escolher "Sign up with GitHub"
+- ✅ **IMPORTANTE:** Use a mesma conta do GitHub onde está seu código
+- ✅ Isso permite deploy automático
+
+### 1.4 Autorizar Render
+- GitHub vai pedir permissão
+- Clique em "Authorize Render"
+
+**✅ Pronto! Conta criada.**
 
 ---
 
-### **PASSO 3: Conectar Render ao GitHub** ⏱️ 2 minutos
+## 🎯 PASSO 2: Preparar o Código no GitHub
 
-1. No painel do Render (https://dashboard.render.com)
-2. Clique em **"New +"** (canto superior direito)
-3. Escolha **"Blueprint"**
-4. Clique em **"Connect a repository"**
-5. Procure por **"ensinalab_content_engine_v1"**
-6. Clique em **"Connect"**
+### 2.1 Verificar se o código está no GitHub
 
-**O que acontece:** O Render vai ler o arquivo `render.yaml` e entender o que precisa criar.
+Você já deve ter o repositório, mas vamos confirmar:
+
+```bash
+# No seu terminal, dentro da pasta do projeto
+git remote -v
+```
+
+**Deve aparecer algo como:**
+```
+origin  https://github.com/lunathiago/ensinalab_content_engine_v1.git (fetch)
+origin  https://github.com/lunathiago/ensinalab_content_engine_v1.git (push)
+```
+
+### 2.2 Fazer commit do render.yaml
+
+```bash
+# Adicionar o arquivo de configuração
+git add render.yaml
+
+# Fazer commit
+git commit -m "Add Render deploy configuration"
+
+# Enviar para GitHub
+git push origin main
+```
+
+**✅ Código está no GitHub com as configurações de deploy!**
 
 ---
 
-### **PASSO 4: Configurar Variáveis de Ambiente** ⏱️ 3 minutos
+## 🎯 PASSO 3: Criar os Serviços no Render
 
-O Render vai criar automaticamente:
-- ✅ API (ensinalab-api)
-- ✅ Worker (ensinalab-worker)
-- ✅ PostgreSQL (ensinalab-db)
-- ✅ Redis (ensinalab-redis)
+### 3.1 Acessar Dashboard do Render
+```
+🌐 https://dashboard.render.com
+```
 
-**MAS** você precisa adicionar manualmente:
+### 3.2 Conectar o Repositório
 
-1. No painel, clique em **"ensinalab-api"**
-2. No menu lateral, clique em **"Environment"**
+1. Clique em **"New +"** (botão azul no canto superior direito)
+2. Escolha **"Blueprint"**
+3. Clique em **"Connect a repository"**
+4. Encontre seu repositório: `ensinalab_content_engine_v1`
+5. Clique em **"Connect"**
+
+**O que acontece:** Render lê o arquivo `render.yaml` e entende o que precisa criar.
+
+### 3.3 Configurar Blueprint
+
+Render vai mostrar uma tela com:
+- ✅ `ensinalab-api` (Web Service)
+- ✅ `ensinalab-worker` (Background Worker)
+- ✅ `ensinalab-db` (PostgreSQL Database)
+
+1. **Service Group Name:** Deixe como `ensinalab-content-engine`
+2. **Branch:** Confirme que está `main`
+3. Clique em **"Apply"**
+
+**⏱️ Aguarde 2-3 minutos** enquanto Render cria os serviços.
+
+---
+
+## 🎯 PASSO 4: Criar Redis (Manual)
+
+O Redis não pode ser criado via YAML no plano free, então vamos criar manualmente:
+
+### 4.1 No Dashboard do Render
+
+1. Clique em **"New +"**
+2. Escolha **"Redis"**
+3. Configure:
+   - **Name:** `ensinalab-redis`
+   - **Plan:** Free (25MB)
+   - **Region:** Ohio (US East)
+4. Clique em **"Create Redis"**
+
+**⏱️ Aguarde 1-2 minutos**
+
+### 4.2 Conectar Redis aos Serviços
+
+1. Vá em **"ensinalab-api"** (na lista de serviços)
+2. Clique na aba **"Environment"**
 3. Clique em **"Add Environment Variable"**
 4. Adicione:
+   ```
+   Key: REDIS_URL
+   Value: (clique em "Select Redis" e escolha "ensinalab-redis")
+   ```
+5. Clique em **"Save Changes"**
 
-```
-Nome: OPENAI_API_KEY
-Valor: sk-proj-xxxxxxxxxxxxxxxxxx (sua chave da OpenAI)
-```
+6. **Repita o processo** para `ensinalab-worker`
 
-5. Repita o processo para **"ensinalab-worker"**
-
-**O que acontece:** Essas são configurações secretas que o código precisa (como senhas).
-
----
-
-### **PASSO 5: Aguardar Deploy** ⏱️ 5-10 minutos
-
-O Render vai automaticamente:
-
-1. ✅ Baixar seu código do GitHub
-2. ✅ Instalar Python 3.9
-3. ✅ Instalar todas as dependências (requirements.txt)
-4. ✅ Criar banco de dados PostgreSQL
-5. ✅ Criar Redis
-6. ✅ Criar tabelas no banco
-7. ✅ Iniciar API
-8. ✅ Iniciar Worker
-
-Você pode acompanhar em **"Logs"** no painel.
-
-**O que acontece:** O Render está configurando tudo automaticamente.
+**✅ Redis conectado!**
 
 ---
 
-### **PASSO 6: Testar a API** ⏱️ 2 minutos
+## 🎯 PASSO 5: Adicionar Chave da OpenAI
 
-Quando o deploy terminar:
+### 5.1 Conseguir sua API Key da OpenAI
 
-1. No painel, clique em **"ensinalab-api"**
-2. No topo, você verá a URL: `https://ensinalab-api.onrender.com`
-3. Clique nela
-4. Adicione `/docs` no final: `https://ensinalab-api.onrender.com/docs`
+1. Acesse: https://platform.openai.com/api-keys
+2. Faça login
+3. Clique em **"Create new secret key"**
+4. Copie a chave (algo como `sk-proj-abc123...`)
+5. **⚠️ IMPORTANTE:** Guarde em local seguro, só aparece uma vez!
 
-Você verá a documentação interativa da API! 🎉
+### 5.2 Adicionar no Render
 
-**Teste:**
+**Para o serviço API:**
+1. Vá em **"ensinalab-api"**
+2. Clique na aba **"Environment"**
+3. Encontre **"OPENAI_API_KEY"**
+4. Clique em **"Edit"**
+5. Cole sua chave da OpenAI
+6. Clique em **"Save Changes"**
+
+**Para o Worker:**
+1. Vá em **"ensinalab-worker"**
+2. Repita o processo acima
+
+**✅ API Key configurada!**
+
+---
+
+## 🎯 PASSO 6: Criar as Tabelas do Banco de Dados
+
+Agora precisamos criar as tabelas no PostgreSQL.
+
+### 6.1 Acessar Shell do Serviço
+
+1. Vá em **"ensinalab-api"**
+2. Clique na aba **"Shell"** (no menu lateral)
+3. Aguarde abrir o terminal
+
+### 6.2 Executar Script de Criação
+
+No terminal que abriu, digite:
+
 ```bash
-# Verificar se está funcionando
+python scripts/create_tables.py
+```
+
+**Você deve ver:**
+```
+✅ Tabelas criadas com sucesso!
+   - briefings
+   - options
+   - videos
+```
+
+**✅ Banco de dados pronto!**
+
+---
+
+## 🎯 PASSO 7: Verificar se Está Funcionando
+
+### 7.1 Pegar a URL da API
+
+1. Vá em **"ensinalab-api"**
+2. No topo, você verá uma URL tipo:
+   ```
+   https://ensinalab-api.onrender.com
+   ```
+3. Copie essa URL
+
+### 7.2 Testar Health Check
+
+Abra no navegador ou use curl:
+
+```bash
 curl https://ensinalab-api.onrender.com/health
-
-# Deve retornar:
-# {"status": "healthy"}
 ```
 
----
-
-## 🎯 O que foi Criado?
-
-```
-┌─────────────────────────────────────┐
-│         Render Dashboard            │
-└─────────────────────────────────────┘
-              │
-    ┌─────────┼─────────┬─────────┐
-    │         │         │         │
-┌───▼───┐ ┌──▼──┐ ┌───▼───┐ ┌──▼───┐
-│  API  │ │Worker│ │  DB   │ │Redis │
-│ (Web) │ │(Task)│ │(Pgsql)│ │(Cache)│
-└───────┘ └──────┘ └───────┘ └──────┘
-   │         │         │         │
-   └─────────┴─────────┴─────────┘
-              │
-         [Internet]
-              │
-         [Usuários]
-```
-
-### **1. API (ensinalab-api)**
-- **O que faz:** Recebe requisições HTTP
-- **URL:** `https://ensinalab-api.onrender.com`
-- **Custo:** Grátis (750h/mês)
-
-### **2. Worker (ensinalab-worker)**
-- **O que faz:** Processa vídeos em background
-- **Sem URL pública** (só a API se comunica com ele)
-- **Custo:** Grátis (750h/mês)
-
-### **3. PostgreSQL (ensinalab-db)**
-- **O que faz:** Armazena dados (briefings, vídeos, etc.)
-- **Conexão interna** (só seus serviços acessam)
-- **Custo:** Grátis por 90 dias, depois $7/mês
-
-### **4. Redis (ensinalab-redis)**
-- **O que faz:** Fila de mensagens entre API e Worker
-- **Conexão interna**
-- **Custo:** Grátis (25MB)
-
----
-
-## 🧪 Como Usar a API Agora
-
-### Exemplo 1: Criar um Briefing
-
-```bash
-curl -X POST "https://ensinalab-api.onrender.com/api/v1/briefings" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Gestão de Sala de Aula",
-    "description": "Técnicas para manter ordem e engajamento",
-    "target_audience": "Professores Iniciantes",
-    "subject_area": "Gestão",
-    "teacher_experience_level": "iniciante",
-    "training_goal": "Melhorar controle da sala",
-    "duration_minutes": 10,
-    "tone": "prático"
-  }'
-```
-
-**Resposta:**
+**Deve retornar:**
 ```json
 {
-  "id": 1,
-  "title": "Gestão de Sala de Aula",
-  "status": "pending",
-  "created_at": "2025-11-04T..."
+  "status": "healthy",
+  "timestamp": "2025-11-06T..."
 }
 ```
 
-### Exemplo 2: Listar Briefings
+### 7.3 Testar Documentação Interativa
 
-```bash
-curl https://ensinalab-api.onrender.com/api/v1/briefings
+Abra no navegador:
+```
+https://ensinalab-api.onrender.com/docs
 ```
 
-### Exemplo 3: Ver Opções Geradas
+**Deve abrir a interface Swagger** com todos os endpoints! 🎉
 
-```bash
-# Aguardar 30-60s após criar briefing
-curl https://ensinalab-api.onrender.com/api/v1/briefings/1/options
+### 7.4 Testar Criação de Briefing
+
+Na interface Swagger:
+
+1. Expanda **"POST /api/v1/briefings"**
+2. Clique em **"Try it out"**
+3. Cole este JSON:
+
+```json
+{
+  "title": "Teste de Deploy",
+  "description": "Testando se o sistema está funcionando após deploy",
+  "target_audience": "Professores",
+  "subject_area": "Teste",
+  "teacher_experience_level": "iniciante",
+  "training_goal": "Testar o sistema",
+  "duration_minutes": 5,
+  "tone": "objetivo"
+}
 ```
+
+4. Clique em **"Execute"**
+
+**Deve retornar Status 201** com o briefing criado!
+
+### 7.5 Verificar Worker Processando
+
+1. Aguarde 30-60 segundos
+2. Vá em **"ensinalab-worker"**
+3. Clique na aba **"Logs"**
+4. Você deve ver:
+   ```
+   🔄 Gerando opções com LangGraph para briefing 1...
+   🤖 Iniciando análise de briefing...
+   ✅ 5 opções geradas...
+   ```
+
+**✅ TUDO FUNCIONANDO!** 🎉
 
 ---
 
-## 🔄 Como Fazer Updates no Código
+## 🎯 PASSO 8: Configurar Deploy Automático (Opcional mas Recomendado)
+
+Agora, toda vez que você fizer `git push`, o Render faz deploy automático!
+
+### 8.1 Verificar Auto-Deploy
+
+1. Vá em **"ensinalab-api"**
+2. Clique na aba **"Settings"**
+3. Role até **"Build & Deploy"**
+4. Confirme que **"Auto-Deploy"** está **Yes**
+
+### 8.2 Testar
 
 ```bash
-# 1. Fazer alterações no código localmente
-nano src/main.py  # ou qualquer arquivo
+# Faça uma mudança qualquer
+echo "# Deploy automático funcionando!" >> README.md
 
-# 2. Commitar mudanças
-git add .
-git commit -m "Atualização: melhorias na API"
-
-# 3. Enviar para GitHub
+# Commit e push
+git add README.md
+git commit -m "Test auto-deploy"
 git push origin main
-
-# 4. RENDER FAZ DEPLOY AUTOMÁTICO! 🎉
-# Você vai ver no dashboard:
-# "Building..." → "Deploying..." → "Live"
 ```
 
-**O que acontece:** Toda vez que você faz `git push`, o Render detecta e faz novo deploy automaticamente (em ~5 minutos).
+**No Render:**
+1. Vá em **"ensinalab-api"**
+2. Clique na aba **"Events"**
+3. Você verá **"Deploy triggered"**
+4. Aguarde 2-3 minutos
+5. **Deploy concluído!**
+
+**✅ Deploy automático configurado!**
 
 ---
 
-## 📊 Monitoramento
+## 📊 Monitoramento e Logs
 
-### Ver Logs em Tempo Real:
+### Ver Logs da API
 
-1. Dashboard → **ensinalab-api** → **Logs**
-2. Você verá tudo que acontece:
+1. Vá em **"ensinalab-api"**
+2. Clique em **"Logs"**
+3. Você verá em tempo real:
+   ```
+   INFO: Uvicorn running on http://0.0.0.0:10000
+   INFO: Application startup complete
+   POST /api/v1/briefings 201
+   ```
 
-```
-[INFO] Application startup complete
-[INFO] Uvicorn running on http://0.0.0.0:10000
-POST /api/v1/briefings 201 Created
-[INFO] Briefing created: id=1
-```
+### Ver Logs do Worker
 
-### Ver Métricas:
+1. Vá em **"ensinalab-worker"**
+2. Clique em **"Logs"**
+3. Você verá:
+   ```
+   [celery@worker] Task received: generate_options
+   [celery@worker] Task completed: generate_options
+   ```
 
-1. Dashboard → **ensinalab-api** → **Metrics**
-2. Você verá:
+### Métricas
+
+1. Vá em qualquer serviço
+2. Clique em **"Metrics"**
+3. Veja:
    - CPU usage
    - Memory usage
    - Request count
@@ -271,157 +345,161 @@ POST /api/v1/briefings 201 Created
 
 ---
 
-## 💰 Custos Reais
+## 🔧 Troubleshooting (Resolver Problemas)
 
-### **Primeiros 3 Meses:**
-```
-API (Web):        $0/mês (grátis)
-Worker:           $0/mês (grátis)
-PostgreSQL:       $0/mês (90 dias grátis)
-Redis:            $0/mês (grátis)
-─────────────────────────
-Total:            $0/mês 🎉
-```
+### ❌ Problema: "Build Failed"
 
-### **Após 3 Meses:**
-```
-API (Web):        $0/mês (ainda grátis, 750h)
-Worker:           $0/mês (ainda grátis, 750h)
-PostgreSQL:       $7/mês (após trial)
-Redis:            $0/mês (ainda grátis)
-─────────────────────────
-Total:            $7/mês
-```
-
-### **Se precisar escalar:**
-```
-API (Pro):        $7/mês (mais recursos)
-Worker (Pro):     $7/mês (mais recursos)
-PostgreSQL:       $7/mês
-Redis:            $3/mês (100MB)
-─────────────────────────
-Total:            $24/mês
-```
-
----
-
-## 🆘 Troubleshooting (Problemas Comuns)
-
-### **1. Deploy falhou com "Build failed"**
-
-**Causa:** Erro nas dependências
+**Causa:** Erro ao instalar dependências
 
 **Solução:**
+1. Vá em **"Logs"** da build
+2. Procure a linha com `ERROR`
+3. Geralmente é uma dependência faltando
+
+**Corrigir:**
 ```bash
-# Testar localmente primeiro
-pip install -r requirements.txt
+# Adicione a dependência que faltou
+pip install <pacote-faltando>
+pip freeze > requirements.txt
 
-# Se funcionar localmente, verificar logs no Render
+# Commit e push
+git add requirements.txt
+git commit -m "Fix dependencies"
+git push
 ```
-
-### **2. API retorna "Application startup failed"**
-
-**Causa:** Variável de ambiente faltando
-
-**Solução:**
-1. Dashboard → ensinalab-api → Environment
-2. Verificar se `OPENAI_API_KEY` está configurada
-3. Adicionar se necessário
-4. Clicar em "Manual Deploy" → "Deploy latest commit"
-
-### **3. Worker não processa vídeos**
-
-**Causa:** Redis não conectado
-
-**Solução:**
-1. Dashboard → ensinalab-worker → Logs
-2. Procurar erro de conexão
-3. Verificar se Redis está rodando (deve estar verde)
-
-### **4. "Database connection failed"**
-
-**Causa:** PostgreSQL ainda está criando
-
-**Solução:**
-- Aguardar 5-10 minutos
-- PostgreSQL leva tempo para inicializar primeira vez
 
 ---
 
-## 🔐 Segurança
+### ❌ Problema: "Service Unavailable"
 
-### O que o Render faz automaticamente:
+**Causa:** Aplicação não iniciou corretamente
 
-✅ **SSL/HTTPS:** Certificado grátis
-✅ **Backups:** PostgreSQL tem backup diário
-✅ **Isolamento:** Cada serviço roda isolado
-✅ **DDoS Protection:** Proteção básica incluída
-✅ **Logs:** Mantidos por 7 dias
+**Solução:**
+1. Vá em **"Logs"**
+2. Procure erros de Python
+3. Geralmente é variável de ambiente faltando
 
-### O que você deve fazer:
+**Corrigir:**
+1. Vá em **"Environment"**
+2. Adicione a variável que falta
+3. Clique em **"Save Changes"**
 
-❗ **NUNCA** commitar `OPENAI_API_KEY` no código
-❗ **SEMPRE** usar variáveis de ambiente
-❗ **VERIFICAR** logs regularmente
-❗ **ATUALIZAR** dependências periodicamente
+---
+
+### ❌ Problema: Worker não processa tarefas
+
+**Causa:** Redis não conectado ou Worker não iniciou
+
+**Solução:**
+1. Verifique se `REDIS_URL` está configurado
+2. Vá em **"ensinalab-worker"** → **"Logs"**
+3. Procure erro de conexão com Redis
+4. Se necessário, recrie a conexão com Redis
+
+---
+
+### ❌ Problema: "Out of Free Hours"
+
+**Causa:** Free tier acabou (750h/mês dividido por serviços)
+
+**Solução:**
+- **Opção 1:** Upgrade para plano pago ($7/serviço)
+- **Opção 2:** Pausar serviços quando não usar
+- **Opção 3:** Migrar para Railway (tem crédito mensal)
+
+---
+
+## 🎨 Fluxo Completo (Resumo Visual)
+
+```
+┌─────────────────┐
+│  SEU CÓDIGO     │
+│  (local)        │
+└────────┬────────┘
+         │ git push
+         ▼
+┌─────────────────┐
+│   GITHUB        │
+│  (repositório)  │
+└────────┬────────┘
+         │ webhook
+         ▼
+┌─────────────────┐
+│   RENDER        │
+│  ┌───────────┐  │
+│  │ BUILD     │  │ ← pip install
+│  └─────┬─────┘  │
+│        ▼        │
+│  ┌───────────┐  │
+│  │ DEPLOY    │  │ ← uvicorn start
+│  └─────┬─────┘  │
+│        ▼        │
+│  ┌───────────┐  │
+│  │ RUNNING   │  │ ← https://sua-url.onrender.com
+│  └───────────┘  │
+└─────────────────┘
+```
+
+---
+
+## 📝 Checklist Final
+
+Antes de considerar o deploy completo, verifique:
+
+- [ ] Conta Render criada
+- [ ] Repositório conectado
+- [ ] `render.yaml` no repositório
+- [ ] Blueprint aplicado
+- [ ] Redis criado e conectado
+- [ ] OPENAI_API_KEY configurada
+- [ ] Tabelas do banco criadas
+- [ ] `/health` retorna 200
+- [ ] `/docs` abre documentação
+- [ ] Briefing de teste criado
+- [ ] Worker processando tarefas
+- [ ] Logs sem erros
+- [ ] Auto-deploy funcionando
+
+**✅ Tudo marcado? Parabéns! Seu sistema está ONLINE!** 🎉
+
+---
+
+## 🚀 Próximos Passos
+
+1. **Configurar domínio customizado** (opcional)
+   - Render permite domínio próprio grátis
+   - Ex: `api.ensinalab.com`
+
+2. **Configurar alertas**
+   - Render pode enviar email se algo der errado
+   - Vá em Settings → Notifications
+
+3. **Backup do banco**
+   - Render faz backup automático
+   - Pode baixar backup manual quando quiser
+
+4. **Monitorar custos**
+   - Acompanhe uso em Billing
+   - Configure alertas de custo
+
+5. **Documentar URL da API**
+   - Compartilhe com equipe
+   - Adicione no README do projeto
 
 ---
 
 ## 📞 Suporte
 
-- **Documentação:** https://render.com/docs
-- **Status:** https://status.render.com
-- **Comunidade:** https://community.render.com
-- **Email:** support@render.com (inglês)
+**Render:**
+- Documentação: https://render.com/docs
+- Community: https://community.render.com
+- Support: support@render.com
+
+**Problemas no código:**
+- GitHub Issues: https://github.com/lunathiago/ensinalab_content_engine_v1/issues
 
 ---
 
-## ✅ Checklist Final
+**Dúvidas?** Entre em contato! 💬
 
-Antes de considerar deploy completo:
-
-- [ ] Código no GitHub
-- [ ] Render conectado ao GitHub
-- [ ] `render.yaml` no repositório
-- [ ] API rodando (status verde)
-- [ ] Worker rodando (status verde)
-- [ ] PostgreSQL criado
-- [ ] Redis criado
-- [ ] `OPENAI_API_KEY` configurada
-- [ ] Endpoint `/health` respondendo
-- [ ] Endpoint `/docs` acessível
-- [ ] Teste de criação de briefing OK
-- [ ] Logs sem erros
-
----
-
-## 🎉 Parabéns!
-
-Sua aplicação está **rodando na nuvem** e acessível para qualquer pessoa na internet!
-
-**URL da API:** https://ensinalab-api.onrender.com
-**Documentação:** https://ensinalab-api.onrender.com/docs
-
----
-
-## 📚 Próximos Passos (Opcional)
-
-1. **Domínio Personalizado:**
-   - Dashboard → ensinalab-api → Settings → Custom Domain
-   - Adicionar: `api.seudominio.com`
-
-2. **Webhooks:**
-   - Notificações quando deploy terminar
-   - Integrar com Discord/Slack
-
-3. **Monitoramento Avançado:**
-   - Integrar com Sentry (erros)
-   - Integrar com LogTail (logs)
-
-4. **CI/CD:**
-   - Adicionar testes automáticos
-   - Deploy só se testes passarem
-
----
-
-**Dúvidas?** Estou aqui para ajudar! 🚀
+**Deploy funcionando?** Compartilhe sua URL! 🌐
