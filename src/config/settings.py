@@ -2,7 +2,7 @@
 Configurações da aplicação usando Pydantic Settings
 """
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 
 class Settings(BaseSettings):
     """Configurações globais da aplicação"""
@@ -12,24 +12,30 @@ class Settings(BaseSettings):
     PORT: int = 8000
     DEBUG: bool = True
     
-    # Database
+    # Database - pode ser URL completa ou componentes individuais
+    DATABASE_URL: Optional[str] = None
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
     DB_USER: str = "postgres"
     DB_PASSWORD: str = "postgres"
     DB_NAME: str = "ensinalab_content"
     
-    @property
-    def DATABASE_URL(self) -> str:
+    def get_database_url(self) -> str:
+        """Retorna DATABASE_URL se disponível, senão constrói a partir dos componentes"""
+        if self.DATABASE_URL:
+            return self.DATABASE_URL
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
-    # Redis (para Celery)
+    # Redis (para Celery) - pode ser URL completa ou componentes individuais
+    REDIS_URL: Optional[str] = None
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     
-    @property
-    def REDIS_URL(self) -> str:
+    def get_redis_url(self) -> str:
+        """Retorna REDIS_URL se disponível, senão constrói a partir dos componentes"""
+        if self.REDIS_URL:
+            return self.REDIS_URL
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
     
     # JWT
@@ -54,9 +60,10 @@ class Settings(BaseSettings):
     
     @property
     def CELERY_CONFIG(self):
+        redis_url = self.get_redis_url()
         return {
-            "broker_url": self.REDIS_URL,
-            "result_backend": self.REDIS_URL,
+            "broker_url": redis_url,
+            "result_backend": redis_url,
             "task_serializer": "json",
             "accept_content": ["json"],
             "result_serializer": "json",

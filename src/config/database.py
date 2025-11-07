@@ -8,7 +8,7 @@ from src.config.settings import settings
 
 # Engine do SQLAlchemy
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.get_database_url(),
     pool_pre_ping=True,
     echo=settings.DEBUG  # Log SQL queries em modo debug
 )
