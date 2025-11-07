@@ -18,16 +18,16 @@ alembic==1.12.1
 celery==5.3.4
 redis==5.0.1
 
-# OpenAI (versão testada localmente)
-openai==1.109.1
+# OpenAI (compatível com Python 3.9+)
+openai>=1.0.0,<2.0.0
 
-# LangChain + LangGraph - pinned to tested compatible versions to avoid resolver backtracking
-langchain==1.0.3
-langchain-core==1.0.3
-langchain-community==0.4.1
-langchain-openai==1.0.2
-langgraph==1.0.2
-langsmith==0.3.45
+# LangChain + LangGraph - versões 0.3.x compatíveis com Python 3.9
+langchain>=0.3.0,<0.4.0
+langchain-core>=0.3.0,<0.4.0
+langchain-community>=0.3.0,<0.4.0
+langchain-openai>=0.2.0,<0.3.0
+langgraph>=0.2.0,<0.3.0
+langsmith>=0.1.0,<0.2.0
 
 # Vector DB (escolher uma)
 # qdrant-client==1.7.0
@@ -35,10 +35,10 @@ langsmith==0.3.45
 
 # Video generation
 moviepy==1.0.3
-# Pin Pillow to a modern known-good release to simplify resolver
-Pillow==11.3.0
-# Pin numpy exactly to avoid resolver downloads/backtracking
-numpy==1.26.4
+# Pin Pillow to a release compatible with MoviePy and Python 3.9+
+Pillow>=10.0.0,<12.0.0
+# Pin numpy for Python 3.9 compatibility
+numpy>=1.24.0,<1.27.0
 
 # TTS (escolher uma opção)
 # elevenlabs==0.2.27  # ElevenLabs TTS
