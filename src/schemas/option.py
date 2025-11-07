@@ -19,7 +19,7 @@ class OptionResponse(BaseModel):
     relevance_score: Optional[float]
     quality_score: Optional[float]
     is_selected: bool
-    metadata: Optional[Dict[str, Any]] = None  # Dados extras dos agentes
+    extra_data: Optional[Dict[str, Any]] = None  # Dados extras dos agentes
     created_at: datetime
     
     class Config:

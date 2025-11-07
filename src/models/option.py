@@ -37,8 +37,8 @@ class Option(Base):
     is_selected = Column(Boolean, default=False)
     selection_notes = Column(Text)  # Notas do gestor ao selecionar
     
-    # Metadata (dados extras dos agentes LLM, scores adicionais, etc.)
-    metadata = Column(JSON)  # JSON com dados extras: alignment_score, rank, etc.
+    # Extra data (dados extras dos agentes LLM, scores adicionais, etc.)
+    extra_data = Column(JSON)  # JSON com dados extras: alignment_score, rank, etc.
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -1,14 +1,16 @@
-# Migração: Adicionar coluna metadata na tabela options
+# Migração: Adicionar coluna extra_data na tabela options
 
 ## Contexto
 
-A coluna `metadata` (tipo JSON) foi adicionada ao modelo `Option` para armazenar dados extras gerados pelos agentes LangGraph durante a geração de opções, como:
+A coluna `extra_data` (tipo JSON) foi adicionada ao modelo `Option` para armazenar dados extras gerados pelos agentes LangGraph durante a geração de opções, como:
 
 - `alignment_score`: Score de alinhamento com o briefing
 - `overall_score`: Score geral combinado
 - `rank`: Posição no ranking
 - `passed_filters`: Status de aprovação nos filtros
 - `ranking_rationale`: Justificativa do ranking
+
+**Nota:** O nome foi alterado de `metadata` para `extra_data` porque `metadata` é reservado pelo SQLAlchemy.
 
 ## Como aplicar a migração
 
@@ -22,8 +24,8 @@ python -m scripts.add_metadata_column
 ```
 
 3. Verifique a saída:
-   - ✅ "Coluna metadata adicionada com sucesso!" → Migração aplicada
-   - ℹ️ "Coluna metadata já existe" → Já foi aplicada anteriormente
+   - ✅ "Coluna extra_data adicionada com sucesso!" → Migração aplicada
+   - ℹ️ "Coluna extra_data já existe" → Já foi aplicada anteriormente
 
 ### Localmente (Desenvolvimento)
 
@@ -53,26 +55,26 @@ curl -X POST https://ensinalab-api.onrender.com/api/v1/briefings \
 
 # Aguardar processamento (~10-30 segundos)
 
-# Listar opções (verificar campo metadata)
+# Listar opções (verificar campo extra_data)
 curl https://ensinalab-api.onrender.com/api/v1/briefings/{id}/options
 ```
 
-O campo `metadata` deve conter um objeto JSON com os dados extras dos agentes.
+O campo `extra_data` deve conter um objeto JSON com os dados extras dos agentes.
 
 ## Rollback (se necessário)
 
 Caso precise reverter:
 
 ```sql
-ALTER TABLE options DROP COLUMN metadata;
+ALTER TABLE options DROP COLUMN extra_data;
 ```
 
 ⚠️ **Atenção**: Isso apagará todos os dados extras armazenados.
 
 ## Status
 
-- ✅ Modelo `Option` atualizado
+- ✅ Modelo `Option` atualizado (campo `extra_data`)
 - ✅ Schema `OptionResponse` atualizado
-- ✅ Service `OptionService` atualizado para popular metadata
+- ✅ Service `OptionService` atualizado para popular extra_data
 - ✅ Script de migração criado
 - ⏳ **Pendente**: Executar migração no banco de dados do Render
