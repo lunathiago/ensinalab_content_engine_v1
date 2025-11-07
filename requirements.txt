@@ -4,8 +4,10 @@
 # FastAPI
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic==2.5.0
-pydantic-settings==2.1.0
+# Pydantic: require a newer 2.x release compatible with LangChain 1.0.x
+pydantic>=2.7.4,<3.0.0
+# Pydantic-settings matching pydantic 2.x
+pydantic-settings>=2.1.0,<3.0.0
 
 # Database
 sqlalchemy==2.0.23
@@ -16,17 +18,16 @@ alembic==1.12.1
 celery==5.3.4
 redis==5.0.1
 
-# OpenAI (versão recente)
-openai>=1.50.0
+# OpenAI (versão testada localmente)
+openai==1.109.1
 
-# LangChain + LangGraph (Versões RECENTES e compatíveis)
-# Atualizando para versões modernas que funcionam com OpenAI novo
-langchain>=0.3.0
-langchain-community>=0.3.0
-langchain-core>=0.3.0
-langchain-openai>=0.2.0
-langgraph>=0.2.0
-langsmith>=0.1.0
+# LangChain + LangGraph - pinned to tested compatible versions to avoid resolver backtracking
+langchain==1.0.3
+langchain-core==1.0.3
+langchain-community==0.4.1
+langchain-openai==1.0.2
+langgraph==1.0.2
+langsmith==0.3.45
 
 # Vector DB (escolher uma)
 # qdrant-client==1.7.0
@@ -34,10 +35,10 @@ langsmith>=0.1.0
 
 # Video generation
 moviepy==1.0.3
-# Allow newer Pillow releases compatible with MoviePy/ImageIO (avoid strict pin)
-Pillow>=10.1.0,<12
-# Keep numpy in a compatible range; MoviePy requires numpy>=1.17.3
-numpy>=1.26.2,<1.27
+# Pin Pillow to a modern known-good release to simplify resolver
+Pillow==11.3.0
+# Pin numpy exactly to avoid resolver downloads/backtracking
+numpy==1.26.4
 
 # TTS (escolher uma opção)
 # elevenlabs==0.2.27  # ElevenLabs TTS
