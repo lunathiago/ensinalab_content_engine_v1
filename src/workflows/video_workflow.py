@@ -3,26 +3,36 @@ Workflow LangGraph para geração de vídeo com state machine
 
 Estados: análise → geração → revisão → aprovação → produção
 """
-from typing import Dict, Literal
+from typing import Dict, Literal, Optional
 from datetime import datetime
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from src.workflows.states import VideoGenerationState
 from src.ml.llm_service import LLMService
-from src.video.tts import TTSService
-from src.video.generator import VideoGenerator
+from src.video.factory import VideoGeneratorFactory
 
 class VideoGenerationWorkflow:
     """
     State machine para geração de vídeo com estados bem definidos
+    Usa factory pattern para escolher gerador dinamicamente
     """
     
-    def __init__(self, checkpointer_path: str = "/tmp/langgraph_checkpoints.db"):
+    def __init__(
+        self, 
+        generator_type: str = 'simple',
+        provider: Optional[str] = None
+    ):
         self.llm_service = LLMService()
-        self.tts_service = TTSService()
-        self.video_generator = VideoGenerator()
         
-        # Checkpointer para salvar estado (usando MemorySaver para compatibilidade)
+        # Criar gerador via factory
+        self.video_generator = VideoGeneratorFactory.create(
+            generator_type=generator_type,
+            provider=provider
+        )
+        
+        self.generator_type = generator_type
+        
+        # Checkpointer para salvar estado
         self.checkpointer = MemorySaver()
         
         # Criar grafo
@@ -146,49 +156,60 @@ class VideoGenerationWorkflow:
         return state
     
     def _generate_audio_node(self, state: VideoGenerationState) -> VideoGenerationState:
-        """Estado 3: Geração de áudio (TTS)"""
-        print("🎤 Gerando áudio...")
+        """Estado 3: Geração de áudio (TTS) - REMOVIDO"""
+        # O gerador agora cuida do TTS internamente
+        print("🎤 Áudio será gerado pelo video generator...")
         
         state['current_step'] = 'generating_audio'
         state['progress'] = 0.5
         
-        try:
-            audio_path = self.tts_service.generate_audio(
-                text=state['enhanced_script'],
-                video_id=state['video_id']
-            )
-            
-            state['audio_path'] = audio_path
-            print(f"   ✓ Áudio gerado: {audio_path}")
-            
-        except Exception as e:
-            state['errors'].append(f"Erro na geração de áudio: {str(e)}")
-        
         return state
     
     def _generate_video_node(self, state: VideoGenerationState) -> VideoGenerationState:
-        """Estado 4: Geração do vídeo"""
-        print("🎥 Gerando vídeo...")
+        """Estado 4: Geração do vídeo usando factory pattern"""
+        print(f"🎥 Gerando vídeo com {self.generator_type}...")
         
         state['current_step'] = 'generating_video'
         state['progress'] = 0.7
         
         try:
-            # Gerar vídeo
-            result = self.video_generator.generate_video(
+            # Preparar metadata
+            metadata = {
+                'tone': state['briefing_data'].get('tone', 'profissional'),
+                'target_audience': state['briefing_data'].get('target_audience'),
+                'subject_area': state['briefing_data'].get('subject_area')
+            }
+            
+            # Gerar vídeo usando factory
+            result = self.video_generator.generate(
                 script=state['enhanced_script'],
-                audio_path=state['audio_path'],
-                metadata={'title': state['briefing_data'].get('title', 'Video')},
+                title=state['briefing_data'].get('title', 'Video'),
+                metadata=metadata,
                 video_id=state['video_id']
             )
             
-            state['video_path'] = result['file_path']
-            state['thumbnail_path'] = result.get('thumbnail_path')
-            
-            print(f"   ✓ Vídeo gerado: {result['file_path']}")
+            if result['success']:
+                state['video_path'] = result['file_path']
+                state['thumbnail_path'] = result.get('thumbnail_path', '')
+                state['file_size'] = result.get('file_size', 0)
+                state['duration'] = result.get('duration', 0)
+                
+                # Adicionar metadata do gerador
+                if 'metadata' not in state:
+                    state['metadata'] = {}
+                state['metadata'].update(result.get('metadata', {}))
+                
+                print(f"   ✓ Vídeo gerado: {result['file_path']}")
+                print(f"   → Duração: {result['duration']:.1f}s")
+                print(f"   → Tamanho: {result['file_size'] / 1024 / 1024:.1f}MB")
+            else:
+                error_msg = result.get('error', 'Erro desconhecido')
+                state['errors'].append(f"Erro na geração de vídeo: {error_msg}")
+                print(f"   ✗ Falha na geração: {error_msg}")
             
         except Exception as e:
             state['errors'].append(f"Erro na geração de vídeo: {str(e)}")
+            print(f"   ✗ Exceção: {e}")
         
         return state
     

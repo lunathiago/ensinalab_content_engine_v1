@@ -96,12 +96,16 @@ def generate_options(self, briefing_id: int):
         raise
 
 @celery_app.task(base=DatabaseTask, bind=True)
-def generate_video(self, video_id: int):
+def generate_video(self, video_id: int, generator_type: str = None):
     """
     Task para gerar vídeo usando State Machine Workflow (LangGraph)
     
     Pipeline: Analyze → Enhance → Generate Audio → Generate Video → Review → Await Approval → Finalize
     Suporta checkpointing e human-in-the-loop
+    
+    Args:
+        video_id: ID do vídeo
+        generator_type: Tipo de gerador ('simple', 'avatar', 'ai') - None = auto-detect
     """
     try:
         print(f"🎬 Gerando vídeo {video_id} com LangGraph State Machine...")
@@ -120,6 +124,21 @@ def generate_video(self, video_id: int):
         option = video.option
         briefing = option.briefing
         
+        # Escolher gerador baseado no briefing ou usar especificado
+        if not generator_type:
+            from src.config.video_config import video_config
+            config = video_config.get_generator_for_briefing({
+                'duration_minutes': briefing.duration_minutes,
+                'tone': briefing.tone,
+                'subject_area': briefing.subject_area
+            })
+            generator_type = config['generator_type']
+            provider = config.get('provider')
+        else:
+            provider = None  # Usar provider padrão
+        
+        print(f"   → Gerador selecionado: {generator_type}")
+        
         # Preparar input para workflow
         input_data = {
             "script_outline": option.script_outline,
@@ -133,12 +152,15 @@ def generate_video(self, video_id: int):
             "video_id": video_id
         }
         
-        # 🎯 Executar Video Generation State Machine
-        workflow = VideoGenerationWorkflow()
+        # 🎯 Executar Video Generation State Machine com gerador escolhido
+        workflow = VideoGenerationWorkflow(
+            generator_type=generator_type,
+            provider=provider
+        )
         result = workflow.run(input_data, video_id=video_id)
         
         # Verificar se precisa de aprovação humana
-        if result['status'] == 'awaiting_approval':
+        if result.get('status') == 'awaiting_approval':
             print(f"⏸️  Vídeo {video_id} aguardando aprovação humana")
             video_service.update_status(
                 video_id, 
@@ -148,14 +170,15 @@ def generate_video(self, video_id: int):
             
             # Salvar checkpoint_id para poder retomar depois
             video.metadata = video.metadata or {}
-            video.metadata['checkpoint_id'] = result['checkpoint_id']
+            video.metadata['checkpoint_id'] = result['metadata'].get('thread_id')
+            video.metadata['generator_type'] = generator_type
             self.db.commit()
             
             return {
                 "video_id": video_id,
                 "status": "awaiting_approval",
-                "checkpoint_id": result['checkpoint_id'],
-                "preview_path": result.get('preview_path')
+                "checkpoint_id": result['metadata'].get('thread_id'),
+                "preview_path": result.get('video_path')
             }
         
         # Processar resultado final
@@ -165,18 +188,19 @@ def generate_video(self, video_id: int):
             # Finalizar
             video_service.complete_video(
                 video_id=video_id,
-                file_path=result['file_path'],
-                file_size=result.get('file_size', 0),
-                duration=result.get('duration', 0),
+                file_path=result['video_path'],
+                file_size=result['metadata'].get('file_size', 0),
+                duration=result['metadata'].get('duration', 0),
                 thumbnail_path=result.get('thumbnail_path')
             )
             
-            print(f"✅ Vídeo {video_id} gerado com sucesso (state machine)!")
+            print(f"✅ Vídeo {video_id} gerado com sucesso ({generator_type})!")
             
             return {
                 "video_id": video_id,
-                "file_path": result['file_path'],
-                "duration": result['duration'],
+                "file_path": result['video_path'],
+                "duration": result['metadata'].get('duration'),
+                "generator_type": generator_type,
                 "metadata": result['metadata']
             }
         else:
@@ -184,6 +208,8 @@ def generate_video(self, video_id: int):
         
     except Exception as e:
         print(f"❌ Erro ao gerar vídeo: {e}")
+        import traceback
+        traceback.print_exc()
         video_service.update_status(
             video_id, 
             VideoStatus.FAILED, 

@@ -35,6 +35,9 @@ class Video(Base):
     file_size_bytes = Column(Integer)
     thumbnail_path = Column(String(500))
     
+    # Generator usado
+    generator_type = Column(String(20), default='simple')  # simple, avatar, ai
+    
     # Status de geração
     status = Column(SQLEnum(VideoStatus), default=VideoStatus.QUEUED)
     progress = Column(Float, default=0.0)  # 0.0 a 1.0
