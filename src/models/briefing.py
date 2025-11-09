@@ -1,7 +1,7 @@
 """
 Model Briefing - representa um briefing enviado pelo gestor
 """
-from sqlalchemy import Column, Integer, String, Text, DateTime, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Text, DateTime, Enum as SQLEnum, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -25,6 +25,7 @@ class Briefing(Base):
     __tablename__ = "briefings"
     
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)  # Owner do briefing
     title = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=False)
     
@@ -44,6 +45,7 @@ class Briefing(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relacionamentos
+    user = relationship("User", back_populates="briefings")  # Dono do briefing
     options = relationship("Option", back_populates="briefing", cascade="all, delete-orphan")
     
     def __repr__(self):

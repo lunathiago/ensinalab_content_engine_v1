@@ -7,8 +7,10 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 from src.config.database import get_db
+from src.models.user import User
 from src.schemas.video import VideoResponse
 from src.services.video_service import VideoService
+from src.services.auth_service import get_current_user
 
 router = APIRouter()
 
@@ -16,39 +18,69 @@ router = APIRouter()
 async def list_videos(
     skip: int = 0,
     limit: int = 20,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Lista todos os vídeos gerados"""
+    """
+    Lista todos os vídeos gerados pelo usuário atual
+    
+    **Requer autenticação** - retorna apenas vídeos do usuário logado
+    """
     service = VideoService(db)
-    return service.list_videos(skip=skip, limit=limit)
+    # Filtrar vídeos por user_id através do relacionamento option -> briefing -> user
+    from src.models.video import Video
+    from src.models.option import Option
+    from src.models.briefing import Briefing
+    
+    videos = db.query(Video).join(Option).join(Briefing).filter(
+        Briefing.user_id == current_user.id
+    ).offset(skip).limit(limit).all()
+    
+    return videos
 
 @router.get("/videos/{video_id}", response_model=VideoResponse)
 async def get_video(
     video_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Obtém detalhes de um vídeo específico"""
+    """
+    Obtém detalhes de um vídeo específico
+    
+    **Requer autenticação** e **ownership** do vídeo
+    """
     service = VideoService(db)
     video = service.get_video(video_id)
     
     if not video:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+    
+    # Verificar ownership através de option -> briefing -> user
+    if video.option.briefing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
     
     return video
 
 @router.get("/videos/{video_id}/download")
 async def download_video(
     video_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Baixa o arquivo de vídeo
+    
+    **Requer autenticação** e **ownership** do vídeo
     """
     service = VideoService(db)
     video = service.get_video(video_id)
     
     if not video:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+    
+    # Verificar ownership
+    if video.option.briefing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
     
     if video.status != "completed":
         raise HTTPException(
@@ -65,10 +97,13 @@ async def download_video(
 @router.get("/videos/{video_id}/status")
 async def get_video_status(
     video_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Verifica o status de geração do vídeo
+    
+    **Requer autenticação** e **ownership** do vídeo
     
     Status possíveis:
     - queued: Na fila
@@ -83,6 +118,10 @@ async def get_video_status(
     if not video:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
     
+    # Verificar ownership
+    if video.option.briefing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
     return {
         "video_id": video.id,
         "status": video.status,
@@ -95,10 +134,13 @@ async def get_video_status(
 @router.post("/videos/{video_id}/approve")
 async def approve_video(
     video_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Aprova um vídeo que está aguardando revisão humana
+    
+    **Requer autenticação** e **ownership** do vídeo
     
     Retoma o workflow LangGraph para finalizar a geração
     """
@@ -109,6 +151,10 @@ async def approve_video(
     
     if not video:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+    
+    # Verificar ownership
+    if video.option.briefing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
     
     if video.status != "pending_approval":
         raise HTTPException(
@@ -130,10 +176,13 @@ async def approve_video(
 async def reject_video(
     video_id: int,
     feedback: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Rejeita um vídeo e solicita revisão
+    
+    **Requer autenticação** e **ownership** do vídeo
     
     Args:
         video_id: ID do vídeo
@@ -148,6 +197,10 @@ async def reject_video(
     
     if not video:
         raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+    
+    # Verificar ownership
+    if video.option.briefing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
     
     if video.status != "pending_approval":
         raise HTTPException(
@@ -168,3 +221,4 @@ async def reject_video(
         "task_id": task.id,
         "feedback": feedback
     }
+

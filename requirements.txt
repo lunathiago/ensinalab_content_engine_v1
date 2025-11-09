@@ -1,5 +1,5 @@
 # EnsinaLab Content Engine - Requirements
-# Updated: 2025-11-07 - Fixed dependency conflicts
+# Updated: 2025-11-09 - Added authentication dependencies
 
 # FastAPI
 fastapi==0.104.1
@@ -8,6 +8,10 @@ uvicorn[standard]==0.24.0
 pydantic>=2.7.4,<3.0.0
 # Pydantic-settings matching pydantic 2.x
 pydantic-settings>=2.1.0,<3.0.0
+
+# Authentication
+python-jose[cryptography]==3.3.0  # JWT tokens
+passlib[bcrypt]==1.7.4  # Password hashing
 
 # Database
 sqlalchemy==2.0.23

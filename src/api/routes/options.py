@@ -6,18 +6,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from src.config.database import get_db
+from src.models.user import User
+from src.models.briefing import Briefing
 from src.schemas.option import OptionResponse, OptionSelect
 from src.services.option_service import OptionService
+from src.services.auth_service import get_current_user
 
 router = APIRouter()
 
 @router.get("/briefings/{briefing_id}/options", response_model=List[OptionResponse])
 async def get_options_for_briefing(
     briefing_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Obtém opções geradas para um briefing
+    
+    **Requer autenticação** e **ownership** do briefing
     
     O motor retorna 3-5 propostas diferentes com:
     - Título sugerido
@@ -26,6 +32,14 @@ async def get_options_for_briefing(
     - Tom/abordagem
     - Pontos-chave
     """
+    # Verificar se briefing existe e pertence ao usuário
+    briefing = db.query(Briefing).filter(Briefing.id == briefing_id).first()
+    if not briefing:
+        raise HTTPException(status_code=404, detail="Briefing não encontrado")
+    
+    if briefing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
     service = OptionService(db)
     options = service.get_options_by_briefing(briefing_id)
     
@@ -41,10 +55,13 @@ async def get_options_for_briefing(
 async def select_option(
     option_id: int,
     selection: OptionSelect,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Gestor seleciona uma opção e inicia geração de vídeo
+    
+    **Requer autenticação** e **ownership** do briefing
     
     Flow:
     1. Marca opção como selecionada
@@ -64,6 +81,10 @@ async def select_option(
     option = option_service.get_option(option_id)
     if not option:
         raise HTTPException(status_code=404, detail="Option not found")
+    
+    # Verificar ownership do briefing associado à opção
+    if option.briefing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
     
     # 2. Marcar opção como selecionada
     option_service.select_option(option_id, selection.notes if selection else None)
@@ -100,11 +121,22 @@ async def select_option(
 @router.post("/briefings/{briefing_id}/regenerate-options")
 async def regenerate_options(
     briefing_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Regenera opções para um briefing (se o gestor não gostou das anteriores)
+    
+    **Requer autenticação** e **ownership** do briefing
     """
+    # Verificar se briefing existe e pertence ao usuário
+    briefing = db.query(Briefing).filter(Briefing.id == briefing_id).first()
+    if not briefing:
+        raise HTTPException(status_code=404, detail="Briefing não encontrado")
+    
+    if briefing.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Acesso negado")
+    
     service = OptionService(db)
     # Dispara task assíncrona para gerar novas opções
     

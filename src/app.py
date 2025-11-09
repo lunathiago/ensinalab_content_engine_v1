@@ -4,9 +4,10 @@ Configuração principal da aplicação FastAPI
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.config.settings import settings
-from src.api.routes import briefings, options, videos, health
+from src.api.routes import auth, briefings, options, videos, health
 
 # Importar models para registrá-los no SQLAlchemy Base
+from src.models.user import User
 from src.models.briefing import Briefing
 from src.models.option import Option
 from src.models.video import Video
@@ -30,6 +31,7 @@ app.add_middleware(
 
 # Registrar rotas
 app.include_router(health.router, tags=["Health"])
+app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(briefings.router, prefix="/api/v1", tags=["Briefings"])
 app.include_router(options.router, prefix="/api/v1", tags=["Options"])
 app.include_router(videos.router, prefix="/api/v1", tags=["Videos"])
