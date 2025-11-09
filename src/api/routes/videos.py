@@ -11,6 +11,8 @@ from src.models.user import User
 from src.schemas.video import VideoResponse
 from src.services.video_service import VideoService
 from src.services.auth_service import get_current_user
+from src.utils.hashid import decode_id
+from src.utils.logger import log_security_event
 
 router = APIRouter()
 
@@ -38,9 +40,9 @@ async def list_videos(
     
     return videos
 
-@router.get("/videos/{video_id}", response_model=VideoResponse)
+@router.get("/videos/{video_hash}", response_model=VideoResponse)
 async def get_video(
-    video_id: int,
+    video_hash: str,  # Hash ofuscado
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -49,6 +51,10 @@ async def get_video(
     
     **Requer autenticação** e **ownership** do vídeo
     """
+    video_id = decode_id(video_hash)
+    if not video_id:
+        raise HTTPException(404, "Vídeo não encontrado")
+    
     service = VideoService(db)
     video = service.get_video(video_id)
     
@@ -57,13 +63,18 @@ async def get_video(
     
     # Verificar ownership através de option -> briefing -> user
     if video.option.briefing.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Acesso negado")
+        log_security_event("unauthorized_video_access", {
+            "user_id": current_user.id,
+            "video_id": video_id,
+            "action": "access"
+        })
+        raise HTTPException(404, "Vídeo não encontrado")
     
     return video
 
-@router.get("/videos/{video_id}/download")
+@router.get("/videos/{video_hash}/download")
 async def download_video(
-    video_id: int,
+    video_hash: str,  # Hash ofuscado
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -72,6 +83,10 @@ async def download_video(
     
     **Requer autenticação** e **ownership** do vídeo
     """
+    video_id = decode_id(video_hash)
+    if not video_id:
+        raise HTTPException(404, "Vídeo não encontrado")
+    
     service = VideoService(db)
     video = service.get_video(video_id)
     
@@ -80,7 +95,12 @@ async def download_video(
     
     # Verificar ownership
     if video.option.briefing.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Acesso negado")
+        log_security_event("unauthorized_video_access", {
+            "user_id": current_user.id,
+            "video_id": video_id,
+            "action": "access"
+        })
+        raise HTTPException(404, "Vídeo não encontrado")
     
     if video.status != "completed":
         raise HTTPException(
@@ -94,9 +114,9 @@ async def download_video(
         filename=f"{video.title}.mp4"
     )
 
-@router.get("/videos/{video_id}/status")
+@router.get("/videos/{video_hash}/status")
 async def get_video_status(
-    video_id: int,
+    video_hash: str,  # Hash ofuscado
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -112,6 +132,10 @@ async def get_video_status(
     - completed: Pronto
     - failed: Erro na geração
     """
+    video_id = decode_id(video_hash)
+    if not video_id:
+        raise HTTPException(404, "Vídeo não encontrado")
+    
     service = VideoService(db)
     video = service.get_video(video_id)
     
@@ -120,7 +144,12 @@ async def get_video_status(
     
     # Verificar ownership
     if video.option.briefing.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Acesso negado")
+        log_security_event("unauthorized_video_access", {
+            "user_id": current_user.id,
+            "video_id": video_id,
+            "action": "access"
+        })
+        raise HTTPException(404, "Vídeo não encontrado")
     
     return {
         "video_id": video.id,
@@ -131,9 +160,9 @@ async def get_video_status(
     }
 
 
-@router.post("/videos/{video_id}/approve")
+@router.post("/videos/{video_hash}/approve")
 async def approve_video(
-    video_id: int,
+    video_hash: str,  # Hash ofuscado
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -154,7 +183,12 @@ async def approve_video(
     
     # Verificar ownership
     if video.option.briefing.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Acesso negado")
+        log_security_event("unauthorized_video_access", {
+            "user_id": current_user.id,
+            "video_id": video_id,
+            "action": "access"
+        })
+        raise HTTPException(404, "Vídeo não encontrado")
     
     if video.status != "pending_approval":
         raise HTTPException(
@@ -172,9 +206,9 @@ async def approve_video(
     }
 
 
-@router.post("/videos/{video_id}/reject")
+@router.post("/videos/{video_hash}/reject")
 async def reject_video(
-    video_id: int,
+    video_hash: str,  # Hash ofuscado
     feedback: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -200,7 +234,12 @@ async def reject_video(
     
     # Verificar ownership
     if video.option.briefing.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Acesso negado")
+        log_security_event("unauthorized_video_access", {
+            "user_id": current_user.id,
+            "video_id": video_id,
+            "action": "access"
+        })
+        raise HTTPException(404, "Vídeo não encontrado")
     
     if video.status != "pending_approval":
         raise HTTPException(

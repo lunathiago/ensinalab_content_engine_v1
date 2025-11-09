@@ -11,6 +11,8 @@ from src.models.user import User
 from src.schemas.briefing import BriefingCreate, BriefingResponse
 from src.services.briefing_service import BriefingService
 from src.services.auth_service import get_current_user
+from src.utils.hashid import decode_id
+from src.utils.logger import log_security_event
 
 router = APIRouter()
 
@@ -70,9 +72,9 @@ async def list_briefings(
     
     return briefings
 
-@router.get("/briefings/{briefing_id}", response_model=BriefingResponse)
+@router.get("/briefings/{briefing_hash}", response_model=BriefingResponse)
 async def get_briefing(
-    briefing_id: int,
+    briefing_hash: str,  # Agora recebe hash em vez de ID
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -81,24 +83,29 @@ async def get_briefing(
     
     **Requer autenticação** e **ownership** do briefing
     """
+    # Decodificar hash para ID
+    briefing_id = decode_id(briefing_hash)
+    if not briefing_id:
+        raise HTTPException(status_code=404, detail="Briefing não encontrado")
+    
     service = BriefingService(db)
     briefing = service.get_briefing(briefing_id)
     
-    if not briefing:
+    # Retornar 404 genérico para evitar info leak (não revela se existe)
+    if not briefing or briefing.user_id != current_user.id:
+        log_security_event("unauthorized_access_attempt", {
+            "user_id": current_user.id,
+            "resource": "briefing",
+            "resource_id": briefing_id,
+            "action": "get"
+        })
         raise HTTPException(status_code=404, detail="Briefing não encontrado")
-    
-    # Verificar ownership
-    if briefing.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Acesso negado: este briefing pertence a outro usuário"
-        )
     
     return briefing
 
-@router.delete("/briefings/{briefing_id}", status_code=204)
+@router.delete("/briefings/{briefing_hash}", status_code=204)
 async def delete_briefing(
-    briefing_id: int,
+    briefing_hash: str,  # Agora recebe hash em vez de ID
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -107,18 +114,23 @@ async def delete_briefing(
     
     **Requer autenticação** e **ownership**
     """
+    # Decodificar hash para ID
+    briefing_id = decode_id(briefing_hash)
+    if not briefing_id:
+        raise HTTPException(status_code=404, detail="Briefing não encontrado")
+    
     service = BriefingService(db)
     briefing = service.get_briefing(briefing_id)
     
-    if not briefing:
+    # Retornar 404 genérico para evitar info leak
+    if not briefing or briefing.user_id != current_user.id:
+        log_security_event("unauthorized_delete_attempt", {
+            "user_id": current_user.id,
+            "resource": "briefing",
+            "resource_id": briefing_id,
+            "action": "delete"
+        })
         raise HTTPException(status_code=404, detail="Briefing não encontrado")
-    
-    # Verificar ownership
-    if briefing.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Acesso negado: você não pode deletar este briefing"
-        )
     
     service.delete_briefing(briefing_id)
     

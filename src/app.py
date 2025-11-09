@@ -1,9 +1,12 @@
 """
 Configuração principal da aplicação FastAPI
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from src.config.settings import settings
+from src.config.rate_limit import limiter
 from src.api.routes import auth, briefings, options, videos, health
 
 # Importar models para registrá-los no SQLAlchemy Base
@@ -19,6 +22,10 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Rate Limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS - permite requisições de outros domínios
 app.add_middleware(

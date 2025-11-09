@@ -1,7 +1,7 @@
 """
 Schemas para Briefing
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 
@@ -17,8 +17,8 @@ class BriefingCreate(BaseModel):
     tone: Optional[str] = Field(None, description="Tom: 'formal', 'prático', 'inspiracional', 'técnico'")
 
 class BriefingResponse(BaseModel):
-    """Schema de resposta de briefing"""
-    id: int
+    """Schema de resposta de briefing (IDs ofuscados para segurança)"""
+    id: str  # Retorna hash em vez de ID numérico
     title: str
     description: str
     target_audience: Optional[str]
@@ -30,6 +30,13 @@ class BriefingResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: Optional[datetime]
+    
+    @field_validator('id', mode='before')
+    @classmethod
+    def hash_id(cls, v):
+        """Converte ID numérico em hash ofuscado"""
+        from src.utils.hashid import encode_id
+        return encode_id(v) if isinstance(v, int) else v
     
     class Config:
         from_attributes = True
