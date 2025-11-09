@@ -59,7 +59,7 @@ class VideoGeneratorFactory:
         
         # Instanciar com provider se aplicável
         if generator_type == 'simple':
-            tts_provider = provider or kwargs.get('tts_provider', 'google')
+            tts_provider = provider or kwargs.get('tts_provider', 'elevenlabs')
             return generator_class(tts_provider=tts_provider)
         
         elif generator_type == 'avatar':
@@ -148,7 +148,7 @@ class VideoGeneratorFactory:
 
 
 # Atalhos para criação rápida
-def create_simple_generator(tts_provider: str = 'google') -> SimpleVideoGenerator:
+def create_simple_generator(tts_provider: str = 'elevenlabs') -> SimpleVideoGenerator:
     """Atalho para criar gerador simples"""
     return VideoGeneratorFactory.create('simple', provider=tts_provider)
 

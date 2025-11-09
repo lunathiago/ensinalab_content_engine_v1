@@ -14,7 +14,7 @@ class VideoGeneratorConfig:
     
     # Provider padrão por gerador
     DEFAULT_PROVIDERS = {
-        'simple': os.getenv("TTS_PROVIDER", "google"),
+        'simple': os.getenv("TTS_PROVIDER", "elevenlabs"),
         'avatar': os.getenv("AVATAR_PROVIDER", "heygen"),
         'ai': os.getenv("AI_VIDEO_PROVIDER", "kling")
     }
@@ -23,13 +23,13 @@ class VideoGeneratorConfig:
     ENVIRONMENTS = {
         'development': {
             'generator': 'simple',
-            'provider': 'google',
-            'description': 'Desenvolvimento local - barato e rápido'
+            'provider': 'elevenlabs',
+            'description': 'Desenvolvimento local - alta qualidade, baixo custo'
         },
         'staging': {
             'generator': 'simple',
-            'provider': 'google',
-            'description': 'Staging - testes'
+            'provider': 'elevenlabs',
+            'description': 'Staging - testes com qualidade profissional'
         },
         'production': {
             'generator': 'avatar',
