@@ -105,17 +105,18 @@ class TTSService:
             return self._generate_fallback(text, output_path)
     
     def _generate_elevenlabs(self, text: str, output_path: str, voice: str) -> str:
-        """Gera com ElevenLabs"""
+        """Gera com ElevenLabs (melhor qualidade para português)"""
         try:
             import requests
             
-            # Mapear voz pt-BR para ElevenLabs
+            # Vozes ElevenLabs com suporte a português
             voice_map = {
-                'pt-BR-FranciscaNeural': 'pNInz6obpgDQGcFmaJgB',  # Adam
-                'pt-BR-AntonioNeural': '21m00Tcm4TlvDq8ikWAM'     # Rachel
+                'pt-BR-FranciscaNeural': 'pNInz6obpgDQGcFmaJgB',  # Adam (versátil)
+                'pt-BR-AntonioNeural': '21m00Tcm4TlvDq8ikWAM',     # Rachel (feminina)
+                'default': 'pNInz6obpgDQGcFmaJgB'
             }
             
-            voice_id = voice_map.get(voice, 'pNInz6obpgDQGcFmaJgB')
+            voice_id = voice_map.get(voice, voice_map['default'])
             
             url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
             
@@ -127,12 +128,16 @@ class TTSService:
             
             data = {
                 "text": text,
-                "model_id": "eleven_multilingual_v2",
+                "model_id": "eleven_multilingual_v2",  # Melhor para português
                 "voice_settings": {
                     "stability": 0.5,
-                    "similarity_boost": 0.5
+                    "similarity_boost": 0.75,
+                    "style": 0.0,
+                    "use_speaker_boost": True
                 }
             }
+            
+            print(f"   🎤 Gerando áudio com ElevenLabs (voz: {voice_id})...")
             
             response = requests.post(url, json=data, headers=headers, timeout=300)
             response.raise_for_status()
@@ -140,12 +145,18 @@ class TTSService:
             with open(output_path, 'wb') as f:
                 f.write(response.content)
             
-            print(f"   ✓ ElevenLabs TTS: {output_path}")
+            print(f"   ✅ ElevenLabs TTS: {output_path}")
             return output_path
             
         except Exception as e:
-            print(f"   ⚠️ ElevenLabs falhou: {e}, usando fallback")
-            return self._generate_fallback(text, output_path)
+            print(f"   ⚠️ ElevenLabs falhou: {e}")
+            print(f"   → Tentando fallback para Google TTS...")
+            # Fallback para Google se disponível
+            try:
+                return self._generate_google(text, output_path, voice, 1.0)
+            except:
+                print(f"   → Google também falhou, gerando fallback...")
+                return self._generate_fallback(text, output_path)
     
     def _generate_amazon(self, text: str, output_path: str, voice: str) -> str:
         """Gera com Amazon Polly"""

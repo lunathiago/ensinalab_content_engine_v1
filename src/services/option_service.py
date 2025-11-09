@@ -24,41 +24,38 @@ class OptionService:
         """Obtém uma opção por ID"""
         return self.db.query(Option).filter(Option.id == option_id).first()
     
-    def select_option(self, option_id: int, notes: Optional[str] = None) -> Optional[Dict]:
+    def select_option(self, option_id: int, notes: Optional[str] = None) -> Option:
         """
-        Marca uma opção como selecionada e dispara geração de vídeo
+        Marca uma opção como selecionada
+        
+        Args:
+            option_id: ID da opção a selecionar
+            notes: Notas adicionais sobre a seleção (opcional)
+        
+        Returns:
+            Option selecionada
         """
         option = self.get_option(option_id)
         if not option:
-            return None
+            raise ValueError(f"Option {option_id} not found")
         
-        # Marca como selecionada
+        # Desmarcar outras opções do mesmo briefing
+        self.db.query(Option).filter(
+            Option.briefing_id == option.briefing_id,
+            Option.id != option_id
+        ).update({'is_selected': False})
+        
+        # Marcar esta opção
         option.is_selected = True
-        option.selection_notes = notes
+        if notes:
+            option.selection_notes = notes
         
-        # Cria registro de vídeo
-        video = Video(
-            option_id=option.id,
-            title=option.title,
-            description=option.summary,
-            status=VideoStatus.QUEUED,
-            progress=0.0
-        )
-        
-        self.db.add(video)
         self.db.commit()
-        self.db.refresh(video)
+        self.db.refresh(option)
         
-        # TODO: Disparar task Celery para gerar vídeo
-        # from src.workers.tasks import generate_video
-        # task = generate_video.delay(video.id)
-        # video.task_id = task.id
-        # self.db.commit()
+        print(f"✅ Opção {option_id} selecionada para briefing {option.briefing_id}")
         
-        return {
-            "video_id": video.id,
-            "option_id": option.id
-        }
+        return option
     
     def create_option(self, option_data: dict) -> Option:
         """Cria uma nova opção (usado pelo motor de geração)"""

@@ -28,6 +28,7 @@ class Video(Base):
     # Informações do vídeo
     title = Column(String(255), nullable=False)
     description = Column(Text)
+    script = Column(Text, nullable=False)  # Roteiro completo do vídeo
     duration_seconds = Column(Integer)
     
     # Arquivo

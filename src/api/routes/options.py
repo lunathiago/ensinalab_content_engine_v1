@@ -44,19 +44,56 @@ async def select_option(
     db: Session = Depends(get_db)
 ):
     """
-    Gestor seleciona uma opção
+    Gestor seleciona uma opção e inicia geração de vídeo
     
-    Isso dispara a geração do vídeo via Celery
+    Flow:
+    1. Marca opção como selecionada
+    2. Cria registro de Video
+    3. Dispara task Celery generate_video
+    
+    Returns:
+        Video criado com status QUEUED
     """
-    service = OptionService(db)
-    result = service.select_option(option_id, selection.notes)
+    from src.services.video_service import VideoService
+    from src.workers.tasks import generate_video
     
-    if not result:
-        raise HTTPException(status_code=404, detail="Opção não encontrada")
+    option_service = OptionService(db)
+    video_service = VideoService(db)
+    
+    # 1. Buscar e validar opção
+    option = option_service.get_option(option_id)
+    if not option:
+        raise HTTPException(status_code=404, detail="Option not found")
+    
+    # 2. Marcar opção como selecionada
+    option_service.select_option(option_id, selection.notes if selection else None)
+    
+    # 3. Criar registro de vídeo
+    video_data = {
+        'option_id': option_id,
+        'title': option.title,
+        'description': option.summary,
+        'script': option.script_outline,
+        'status': 'QUEUED',
+        'generator_type': 'simple'  # Default, pode ser sobrescrito
+    }
+    
+    video = video_service.create_video(video_data)
+    
+    # 4. Disparar task de geração
+    task = generate_video.delay(video.id)
+    
+    # 5. Salvar task_id
+    video.task_id = task.id
+    db.commit()
+    
+    print(f"🚀 Task {task.id} disparada para vídeo {video.id}")
     
     return {
-        "message": "Opção selecionada! Vídeo será gerado em breve.",
-        "video_id": result["video_id"],
+        "message": "Opção selecionada! Vídeo será gerado.",
+        "video_id": video.id,
+        "task_id": task.id,
+        "status": video.status,
         "estimated_time": "2-5 minutos"
     }
 

@@ -2,7 +2,7 @@
 Service para Videos
 """
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Dict
 from src.models.video import Video, VideoStatus
 
 class VideoService:
@@ -10,6 +10,30 @@ class VideoService:
     
     def __init__(self, db: Session):
         self.db = db
+    
+    def create_video(self, video_data: Dict) -> Video:
+        """
+        Cria um novo vídeo
+        
+        Args:
+            video_data: Dicionário com dados do vídeo
+                - option_id: ID da opção selecionada
+                - title: Título do vídeo
+                - description: Descrição (opcional)
+                - script: Roteiro completo
+                - generator_type: Tipo de gerador (opcional, default: simple)
+        
+        Returns:
+            Video criado
+        """
+        video = Video(**video_data)
+        self.db.add(video)
+        self.db.commit()
+        self.db.refresh(video)
+        
+        print(f"✅ Vídeo {video.id} criado: {video.title} (status: {video.status})")
+        
+        return video
     
     def get_video(self, video_id: int) -> Optional[Video]:
         """Obtém um vídeo por ID"""
