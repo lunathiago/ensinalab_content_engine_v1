@@ -10,29 +10,54 @@ from pathlib import Path
 class TTSService:
     """Serviço de conversão de texto para fala"""
     
-    def __init__(self, provider: str = "google"):
+    def __init__(self, provider: str = "auto"):
         """
         Inicializa serviço TTS
         
         Args:
-            provider: Provider a usar ('google', 'elevenlabs', 'amazon', 'azure')
+            provider: Provider a usar ('auto', 'elevenlabs', 'google', 'amazon', 'azure')
+                     'auto' = detecta automaticamente baseado nas credenciais
         """
-        self.provider = provider.lower()
+        self.provider = self._detect_provider(provider)
         self.output_dir = Path("generated_videos/audio")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Verificar credenciais
-        if self.provider == "google":
-            self.api_key = os.getenv("GOOGLE_CLOUD_API_KEY")
-        elif self.provider == "elevenlabs":
-            self.api_key = os.getenv("ELEVENLABS_API_KEY")
-        elif self.provider == "amazon":
-            # AWS usa credentials diferentes
-            pass
-        elif self.provider == "azure":
-            self.api_key = os.getenv("AZURE_SPEECH_KEY")
+        self.api_key = self._get_api_key(self.provider)
+        
+        print(f"   🎤 TTS Provider selecionado: {self.provider}")
+    
+    def _detect_provider(self, requested_provider: str) -> str:
+        """
+        Detecta o melhor provider baseado nas credenciais disponíveis
+        
+        Prioridade: ElevenLabs > Google > Amazon > Azure > Fallback
+        """
+        if requested_provider.lower() != "auto":
+            return requested_provider.lower()
+        
+        # Verificar credenciais na ordem de prioridade
+        if os.getenv("ELEVENLABS_API_KEY"):
+            return "elevenlabs"
+        elif os.getenv("GOOGLE_CLOUD_API_KEY") or os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+            return "google"
+        elif os.getenv("AWS_ACCESS_KEY_ID"):
+            return "amazon"
+        elif os.getenv("AZURE_SPEECH_KEY"):
+            return "azure"
         else:
-            raise ValueError(f"Provider '{provider}' não suportado")
+            print("   ⚠️ Nenhuma credencial TTS encontrada, usando fallback")
+            return "fallback"
+    
+    def _get_api_key(self, provider: str) -> Optional[str]:
+        """Obtém a chave API para o provider"""
+        key_map = {
+            "google": "GOOGLE_CLOUD_API_KEY",
+            "elevenlabs": "ELEVENLABS_API_KEY",
+            "azure": "AZURE_SPEECH_KEY"
+        }
+        env_var = key_map.get(provider)
+        return os.getenv(env_var) if env_var else None
     
     def generate(
         self, 
@@ -54,10 +79,10 @@ class TTSService:
             Caminho do arquivo de áudio gerado
         """
         
-        if self.provider == "google":
-            return self._generate_google(text, output_path, voice, speed)
-        elif self.provider == "elevenlabs":
+        if self.provider == "elevenlabs":
             return self._generate_elevenlabs(text, output_path, voice)
+        elif self.provider == "google":
+            return self._generate_google(text, output_path, voice, speed)
         elif self.provider == "amazon":
             return self._generate_amazon(text, output_path, voice)
         elif self.provider == "azure":

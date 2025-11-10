@@ -31,7 +31,7 @@ class SimpleVideoGenerator(BaseVideoGenerator):
     Custo: ~$0.30-1/vídeo
     """
     
-    def __init__(self, tts_provider: str = "elevenlabs"):
+    def __init__(self, tts_provider: str = "auto"):
         super().__init__()
         self.tts = TTSService(provider=tts_provider)
         self.slides_dir = Path("generated_videos/slides")
