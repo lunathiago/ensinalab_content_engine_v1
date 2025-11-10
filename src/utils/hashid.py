@@ -8,13 +8,13 @@ Converte IDs inteiros em hashes curtos e não-sequenciais:
 Isso previne enumeração de recursos e IDOR attacks,
 mantendo IDs internos como integers no banco de dados.
 """
-import os
 from hashids import Hashids
 from typing import Optional
+from src.config.settings import settings
 
 # Configuração do Hashids
 # IMPORTANTE: HASHID_SALT deve ser secreto e único por ambiente
-HASHID_SALT = os.getenv("HASHID_SALT", "ensinalab-default-salt-change-in-production")
+HASHID_SALT = settings.HASHID_SALT
 HASHID_MIN_LENGTH = 8  # Mínimo de 8 caracteres no hash
 HASHID_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 

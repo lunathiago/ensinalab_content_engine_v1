@@ -2,7 +2,7 @@
 Configurações da aplicação usando Pydantic Settings
 """
 from pydantic_settings import BaseSettings
-from typing import List, Optional
+from typing import List, Optional, Union
 
 class Settings(BaseSettings):
     """Configurações globais da aplicação"""
@@ -43,12 +43,30 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     
+    # Hashids (para ofuscar IDs sequenciais)
+    HASHID_SALT: str = "ensinalab-default-salt-change-in-production"
+    
     # OpenAI
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4"
     
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+    # CORS - aceita "*" ou lista de origens separadas por vírgula
+    CORS_ORIGINS: str = "*"
+    
+    def get_cors_origins(self) -> Union[List[str], str]:
+        """
+        Retorna configuração de CORS:
+        - Se CORS_ORIGINS = "*", retorna ["*"] (permite todas as origens)
+        - Se CORS_ORIGINS = "https://app.com,https://admin.com", retorna lista
+        
+        Exemplos de uso em .env:
+        - CORS_ORIGINS="*"  # Permite todas as origens (desenvolvimento)
+        - CORS_ORIGINS="https://ensinalab.com.br,https://app.ensinalab.com.br"  # Produção
+        """
+        if self.CORS_ORIGINS == "*":
+            return ["*"]
+        # Split por vírgula e remove espaços
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
     
     # Storage
     UPLOAD_DIR: str = "/tmp/ensinalab_uploads"
