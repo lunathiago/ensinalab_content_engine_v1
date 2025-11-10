@@ -1,6 +1,7 @@
 """
 Tasks assíncronas do Celery com integração LangGraph
 """
+from typing import Optional
 from celery import Task
 from src.workers.celery_config import celery_app
 from src.config.database import SessionLocal, import_all_models
@@ -36,7 +37,17 @@ class DatabaseTask(Task):
             self.db = db
             return super().__call__(*args, **kwargs)
 
-@celery_app.task(base=DatabaseTask, bind=True)
+@celery_app.task(
+    base=DatabaseTask, 
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=180,
+    retry_jitter=True,
+    max_retries=2,
+    acks_late=True,
+    reject_on_worker_lost=True
+)
 def generate_options(self, briefing_id: int):
     """
     Task para gerar opções de conteúdo usando Multi-Agent Workflow (LangGraph)
@@ -104,7 +115,17 @@ def generate_options(self, briefing_id: int):
         briefing_service.update_status(briefing_id, BriefingStatus.FAILED)
         raise
 
-@celery_app.task(base=DatabaseTask, bind=True)
+@celery_app.task(
+    base=DatabaseTask, 
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+    max_retries=3,
+    acks_late=True,
+    reject_on_worker_lost=True
+)
 def generate_video(self, video_id: int, generator_type: str = None):
     """
     Task para gerar vídeo usando State Machine Workflow (LangGraph)
@@ -115,8 +136,18 @@ def generate_video(self, video_id: int, generator_type: str = None):
     Args:
         video_id: ID do vídeo
         generator_type: Tipo de gerador ('simple', 'avatar', 'ai') - None = auto-detect
+    
+    Retry Policy:
+        - Auto-retry em caso de worker restart (max 3x)
+        - Backoff exponencial com jitter
+        - Task confirmada apenas após conclusão
     """
     try:
+        # Log retry info
+        retry_num = self.request.retries
+        if retry_num > 0:
+            print(f"🔄 RETRY {retry_num}/{self.max_retries} - Vídeo {video_id}")
+        
         print(f"🎬 Gerando vídeo {video_id} com LangGraph State Machine...")
         
         # Obter vídeo e opção
