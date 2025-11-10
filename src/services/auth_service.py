@@ -35,7 +35,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True se senha correta, False caso contrário
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    # bcrypt trunca automaticamente em 72 bytes, fazemos explicitamente
+    password_bytes = plain_password.encode('utf-8')[:72]
+    return pwd_context.verify(password_bytes, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
@@ -47,8 +49,13 @@ def get_password_hash(password: str) -> str:
     
     Returns:
         Hash bcrypt da senha
+    
+    Note:
+        bcrypt limita senhas a 72 bytes. Senhas maiores são truncadas.
     """
-    return pwd_context.hash(password)
+    # bcrypt limita a 72 bytes - truncamos explicitamente para evitar erro
+    password_bytes = password.encode('utf-8')[:72]
+    return pwd_context.hash(password_bytes)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
