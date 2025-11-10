@@ -3,6 +3,10 @@ Configuração do Celery
 """
 from celery import Celery
 from src.config.settings import settings
+from src.config.database import import_all_models
+
+# IMPORTANTE: Garantir que todos os models estão registrados
+import_all_models()
 
 # Criar app Celery
 celery_app = Celery(

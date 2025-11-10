@@ -30,6 +30,19 @@ def get_db():
     finally:
         db.close()
 
+def import_all_models():
+    """
+    Importa todos os models para garantir que o SQLAlchemy os registre
+    Deve ser chamado antes de qualquer operação de DB
+    """
+    from src.models.user import User
+    from src.models.briefing import Briefing
+    from src.models.option import Option
+    from src.models.video import Video
+    # Retorna os models para evitar warning de "unused import"
+    return User, Briefing, Option, Video
+
 def init_db():
     """Inicializa o banco de dados criando todas as tabelas"""
+    import_all_models()  # Garantir que todos os models estão registrados
     Base.metadata.create_all(bind=engine)

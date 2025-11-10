@@ -3,7 +3,10 @@ Tasks assíncronas do Celery com integração LangGraph
 """
 from celery import Task
 from src.workers.celery_config import celery_app
-from src.config.database import SessionLocal
+from src.config.database import SessionLocal, import_all_models
+
+# IMPORTANTE: Importar todos os models ANTES de qualquer operação
+import_all_models()
 
 # Imports de enums (não causam dependência circular)
 from src.models.briefing import BriefingStatus
