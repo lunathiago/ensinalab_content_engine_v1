@@ -166,7 +166,7 @@ def generate_video(self, video_id: int, generator_type: str = None):
             generator_type=generator_type,
             provider=provider
         )
-        result = workflow.run(input_data, video_id=video_id)
+        result = workflow.run(input_data)  # video_id já está dentro de input_data
         
         # Verificar se precisa de aprovação humana
         if result.get('status') == 'awaiting_approval':
