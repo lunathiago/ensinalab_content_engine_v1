@@ -136,12 +136,22 @@ async def get_current_user(
         print(f"❌ Token decode failed: {e.detail}")
         raise
     
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
         print(f"❌ Token payload missing 'sub': {payload}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido: sub não encontrado",
+        )
+    
+    # Converter string para int
+    try:
+        user_id = int(user_id_str)
+    except (ValueError, TypeError):
+        print(f"❌ Invalid user_id in token: {user_id_str}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido: ID de usuário inválido",
         )
     
     user = db.query(User).filter(User.id == user_id).first()

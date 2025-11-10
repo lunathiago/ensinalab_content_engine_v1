@@ -103,10 +103,10 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
             detail="Usuário inativo. Entre em contato com o administrador."
         )
     
-    # Criar token
+    # Criar token (sub deve ser string)
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.id},
+        data={"sub": str(user.id)},
         expires_delta=access_token_expires
     )
     
