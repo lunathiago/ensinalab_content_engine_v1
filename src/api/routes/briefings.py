@@ -2,7 +2,7 @@
 Rotas para Briefings
 Gestores enviam briefings simplificados aqui
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from src.config.database import get_db
@@ -13,6 +13,7 @@ from src.services.briefing_service import BriefingService
 from src.services.auth_service import get_current_user
 from src.utils.hashid import decode_id
 from src.utils.logger import log_security_event
+from src.ml.content_guardrails import ContentGuardrails
 
 router = APIRouter()
 
@@ -27,6 +28,9 @@ async def create_briefing(
     
     **Requer autenticação** (Header: `Authorization: Bearer {token}`)
     
+    **Guardrails**: Apenas conteúdo educacional é aceito. Briefings sobre
+    política, religião ou temas não-educacionais serão rejeitados.
+    
     O gestor escolar envia:
     - Título/tema do treinamento
     - Público-alvo (professores iniciantes, coordenadores, etc)
@@ -36,6 +40,42 @@ async def create_briefing(
     - Duração desejada
     - Tom/estilo
     """
+    
+    # 🛡️ GUARDRAIL: Validar conteúdo educacional
+    guardrails = ContentGuardrails()
+    is_valid, reason, confidence = guardrails.validate_briefing(
+        title=briefing_data.title,
+        description=briefing_data.description,
+        subject_area=briefing_data.subject_area,
+        target_audience=briefing_data.target_audience
+    )
+    
+    if not is_valid:
+        # Log tentativa rejeitada
+        log_security_event(
+            event_type="content_guardrail_rejection",
+            user_id=current_user.id,
+            details={
+                "reason": reason,
+                "confidence": confidence,
+                "title": briefing_data.title[:100]
+            }
+        )
+        
+        # Retornar erro 422 (Unprocessable Entity)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "message": "Briefing rejeitado: conteúdo não-educacional",
+                "reason": reason,
+                "confidence": confidence,
+                "hint": "A plataforma aceita apenas conteúdo relacionado a educação, "
+                        "treinamento de professores e desenvolvimento pedagógico."
+            }
+        )
+    
+    print(f"✅ Guardrail aprovado: {reason} (confiança: {confidence:.2f})")
+    
     service = BriefingService(db)
     
     # Adicionar user_id ao briefing data
