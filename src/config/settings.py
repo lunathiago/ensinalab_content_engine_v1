@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     # Hashids (para ofuscar IDs sequenciais)
     HASHID_SALT: str = "ensinalab-default-salt-change-in-production"
     
+    # Registration Control
+    ALLOW_USER_REGISTRATION: bool = True  # Desabilitar em produção se necessário
+    
     # OpenAI
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4"

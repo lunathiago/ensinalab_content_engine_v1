@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.config.database import get_db
+from src.config.settings import settings
 from src.schemas.auth import UserCreate, UserLogin, Token, UserResponse
 from src.services.auth_service import (
     create_access_token,
@@ -32,7 +33,17 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     
     Returns:
         Informações do usuário criado (sem senha)
+    
+    Note:
+        Registro pode estar desabilitado via ALLOW_USER_REGISTRATION=False
     """
+    # Verificar se registro está habilitado
+    if not settings.ALLOW_USER_REGISTRATION:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registro de novos usuários está temporariamente desabilitado. Entre em contato com o administrador."
+        )
+    
     # Verificar se email já existe
     existing_email = db.query(User).filter(User.email == user_data.email).first()
     if existing_email:
