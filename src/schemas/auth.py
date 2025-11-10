@@ -1,9 +1,10 @@
 """
 Schemas para autenticação
 """
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from typing import Optional, Union
 from datetime import datetime
+from src.utils.hashid import encode_id
 
 
 class UserCreate(BaseModel):
@@ -29,12 +30,12 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     """Schema para dados extraídos do token"""
-    user_id: Optional[int] = None
+    user_id: Optional[Union[int, str]] = None
 
 
 class UserResponse(BaseModel):
     """Schema para retornar informações do usuário"""
-    id: int
+    id: Union[int, str]
     email: str
     username: str
     full_name: Optional[str]
@@ -44,6 +45,14 @@ class UserResponse(BaseModel):
     monthly_video_limit: int
     created_at: datetime
     last_login: Optional[datetime] = None
+    
+    @field_validator('id', mode='before')
+    @classmethod
+    def hash_id(cls, v):
+        """Converte ID sequencial para hash ofuscado"""
+        if isinstance(v, int):
+            return encode_id(v)
+        return v
     
     class Config:
         from_attributes = True
