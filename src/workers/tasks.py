@@ -148,17 +148,13 @@ def generate_video(self, video_id: int, generator_type: str = None):
         
         print(f"   → Gerador selecionado: {generator_type}")
         
-        # Preparar input para workflow
-        input_data = {
-            "script_outline": option.script_outline,
-            "briefing": {
-                'target_audience': briefing.target_audience,
-                'subject_area': briefing.subject_area,
-                'duration_minutes': briefing.duration_minutes,
-                'tone': briefing.tone,
-                'title': option.title
-            },
-            "video_id": video_id
+        # Preparar dados do briefing para o workflow
+        briefing_data = {
+            'target_audience': briefing.target_audience,
+            'subject_area': briefing.subject_area,
+            'duration_minutes': briefing.duration_minutes,
+            'tone': briefing.tone,
+            'title': option.title
         }
         
         # 🎯 Executar Video Generation State Machine com gerador escolhido
@@ -166,7 +162,14 @@ def generate_video(self, video_id: int, generator_type: str = None):
             generator_type=generator_type,
             provider=provider
         )
-        result = workflow.run(input_data)  # video_id já está dentro de input_data
+        
+        # Chamar com argumentos posicionais corretos
+        result = workflow.run(
+            video_id=video_id,
+            option_id=option.id,
+            briefing_data=briefing_data,
+            script_outline=option.script_outline
+        )
         
         # Verificar se precisa de aprovação humana
         if result.get('status') == 'awaiting_approval':
