@@ -77,6 +77,10 @@ class SimpleVideoGenerator(BaseVideoGenerator):
                              .crossfadeout(0.5 if i < len(sections) - 1 else 0))
                 
                 slide_clips.append(slide_clip)
+                
+                # 🧹 LIMPEZA: Liberar memória após cada slide
+                import gc
+                gc.collect()
             
             print(f"   → {len(slide_clips)} slides criados")
             
@@ -86,16 +90,19 @@ class SimpleVideoGenerator(BaseVideoGenerator):
             # 5. Sincronizar áudio
             final_video = video_with_slides.set_audio(audio)
             
-            # 6. Exportar
+            # 6. Exportar (otimizado para baixo uso de memória)
             output_path = str(self.output_dir / f"video_{video_id}_simple.mp4")
             final_video.write_videofile(
                 output_path,
-                fps=24,
+                fps=24,  # Mantido 24fps (padrão)
                 codec='libx264',
                 audio_codec='aac',
-                threads=4,
-                preset='medium',
-                logger=None  # Silenciar logs do moviepy
+                threads=2,  # Reduzido de 4 para 2 (menos memória paralela)
+                preset='ultrafast',  # Mudado de 'medium' para 'ultrafast' (menos RAM)
+                logger=None,  # Silenciar logs do moviepy
+                # Otimizações extras para baixa memória:
+                bitrate='1000k',  # Limitar bitrate (menos buffer)
+                audio_bitrate='128k'
             )
             
             # 7. Gerar thumbnail
@@ -109,6 +116,11 @@ class SimpleVideoGenerator(BaseVideoGenerator):
             final_video.close()
             for clip in slide_clips:
                 clip.close()
+            
+            # 🧹 LIMPEZA AGRESSIVA: Forçar garbage collection
+            import gc
+            del audio, final_video, slide_clips, video_with_slides
+            gc.collect()
             
             print(f"✅ [SimpleGenerator] Vídeo gerado: {output_path}")
             
@@ -161,9 +173,11 @@ class SimpleVideoGenerator(BaseVideoGenerator):
             sections.append(current_section)
         
         # Se não encontrou seções, dividir em partes iguais
+        # LIMITE: Máximo 10 slides para economizar memória (512MB free tier)
         if not sections:
             words = script.split()
-            chunk_size = max(50, len(words) // 5)  # ~5 slides
+            max_slides = 10  # Reduzido de 5 para 10 max
+            chunk_size = max(50, len(words) // max_slides)
             sections = [
                 {
                     'title': main_title if i == 0 else f'Parte {i+1}',
@@ -171,6 +185,22 @@ class SimpleVideoGenerator(BaseVideoGenerator):
                 }
                 for i in range(0, len(words), chunk_size)
             ]
+        
+        # SEGURANÇA: Limitar a 10 slides máximo (10 × 2.5MB = 25MB vs 23 × 6MB = 138MB)
+        if len(sections) > 10:
+            print(f"   ⚠️ Muitos slides ({len(sections)}), consolidando para 10...")
+            # Agrupar slides excedentes
+            step = len(sections) / 10
+            consolidated = []
+            for i in range(10):
+                start_idx = int(i * step)
+                end_idx = int((i + 1) * step)
+                merged_content = ' '.join([s['content'] for s in sections[start_idx:end_idx]])
+                consolidated.append({
+                    'title': sections[start_idx]['title'] or f'Parte {i+1}',
+                    'content': merged_content
+                })
+            sections = consolidated
         
         # Garantir que primeira seção tenha título
         if sections and not sections[0]['title']:
@@ -212,8 +242,10 @@ class SimpleVideoGenerator(BaseVideoGenerator):
     ) -> str:
         """Cria slide visual com PIL"""
         
-        # Dimensões 16:9 Full HD
-        width, height = 1920, 1080
+        # Dimensões 16:9 HD (reduzido para economia de memória)
+        # Full HD (1920x1080) = ~6MB/slide
+        # HD (1280x720) = ~2.5MB/slide (60% menos memória!)
+        width, height = 1280, 720
         
         # Criar imagem com gradiente
         img = Image.new('RGB', (width, height), color='#1a1a2e')
