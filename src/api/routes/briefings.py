@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from src.config.database import get_db
-from src.models.briefing import Briefing
+from src.models.briefing import Briefing, BriefingStatus
 from src.models.user import User
 from src.schemas.briefing import BriefingCreate, BriefingResponse
 from src.services.briefing_service import BriefingService
@@ -38,14 +38,31 @@ async def create_briefing(
     """
     service = BriefingService(db)
     
-    # Adicionar user_id ao briefing
+    # Adicionar user_id ao briefing data
     briefing_dict = briefing_data.model_dump()
     briefing_dict['user_id'] = current_user.id
     
-    briefing = service.create_briefing(briefing_dict)
+    # Criar briefing passando dicionário
+    briefing = Briefing(
+        user_id=current_user.id,
+        title=briefing_data.title,
+        description=briefing_data.description,
+        target_audience=briefing_data.target_audience,
+        subject_area=briefing_data.subject_area,
+        teacher_experience_level=briefing_data.teacher_experience_level,
+        training_goal=briefing_data.training_goal,
+        duration_minutes=briefing_data.duration_minutes,
+        tone=briefing_data.tone,
+        status=BriefingStatus.PENDING
+    )
     
-    # Iniciar processamento assíncrono para gerar opções
-    # (será implementado com Celery)
+    db.add(briefing)
+    db.commit()
+    db.refresh(briefing)
+    
+    # Disparar task Celery para gerar opções
+    from src.workers.tasks import generate_options
+    generate_options.delay(briefing.id)
     
     print(f"✅ Briefing {briefing.id} criado por {current_user.email}")
     
