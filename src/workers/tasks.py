@@ -4,11 +4,17 @@ Tasks assíncronas do Celery com integração LangGraph
 from celery import Task
 from src.workers.celery_config import celery_app
 from src.config.database import SessionLocal
+
+# Imports de enums (não causam dependência circular)
+from src.models.briefing import BriefingStatus
+from src.models.video import VideoStatus
+
+# Imports de services (não importam models diretamente)
 from src.services.briefing_service import BriefingService
 from src.services.option_service import OptionService
 from src.services.video_service import VideoService
-from src.models.briefing import Briefing, BriefingStatus
-from src.models.video import VideoStatus
+
+# Imports de ML e Video (não importam models)
 from src.ml.llm_service import LLMService
 from src.ml.filters import ContentFilter
 from src.video.tts import TTSService

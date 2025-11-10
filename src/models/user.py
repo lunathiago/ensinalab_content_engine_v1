@@ -37,7 +37,7 @@ class User(Base):
     last_login = Column(DateTime(timezone=True))
     
     # Relacionamentos
-    briefings = relationship("Briefing", back_populates="user")
+    briefings = relationship("Briefing", back_populates="user", lazy="select")
     
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', username='{self.username}')>"

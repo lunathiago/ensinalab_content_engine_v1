@@ -45,8 +45,8 @@ class Briefing(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relacionamentos
-    user = relationship("User", back_populates="briefings")  # Dono do briefing
-    options = relationship("Option", back_populates="briefing", cascade="all, delete-orphan")
+    user = relationship("User", back_populates="briefings", lazy="select")  # Lazy loading
+    options = relationship("Option", back_populates="briefing", cascade="all, delete-orphan", lazy="select")
     
     def __repr__(self):
         return f"<Briefing(id={self.id}, title='{self.title}', status='{self.status}')>"
