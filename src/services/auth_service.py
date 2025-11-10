@@ -129,14 +129,38 @@ async def get_current_user(
         HTTPException: Se token inválido ou usuário não encontrado
     """
     token = credentials.credentials
-    payload = decode_access_token(token)
+    
+    try:
+        payload = decode_access_token(token)
+    except HTTPException as e:
+        print(f"❌ Token decode failed: {e.detail}")
+        raise
     
     user_id: int = payload.get("sub")
     if user_id is None:
+        print(f"❌ Token payload missing 'sub': {payload}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido: sub não encontrado",
         )
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        print(f"❌ User not found for ID: {user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuário não encontrado",
+        )
+    
+    if not user.is_active:
+        print(f"❌ User inactive: {user.email}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário inativo",
+        )
+    
+    print(f"✅ Authenticated: {user.email} (ID: {user.id})")
+    return user
     
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
