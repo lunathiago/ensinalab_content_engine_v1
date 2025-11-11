@@ -82,7 +82,16 @@ async def download_video(
     Baixa o arquivo de vídeo
     
     **Requer autenticação** e **ownership** do vídeo
+    
+    IMPORTANTE: No Render, worker e web service são containers separados.
+    O vídeo é gerado pelo worker mas não é acessível pelo web service.
+    
+    Soluções:
+    - Migrar para S3/R2 (recomendado para produção)
+    - Usar Persistent Disk do Render (temporário)
     """
+    import os
+    
     video_id = decode_id(video_hash)
     if not video_id:
         raise HTTPException(404, "Vídeo não encontrado")
@@ -98,7 +107,7 @@ async def download_video(
         log_security_event("unauthorized_video_access", {
             "user_id": current_user.id,
             "video_id": video_id,
-            "action": "access"
+            "action": "download"
         })
         raise HTTPException(404, "Vídeo não encontrado")
     
@@ -106,6 +115,20 @@ async def download_video(
         raise HTTPException(
             status_code=400,
             detail=f"Vídeo ainda não está pronto. Status: {video.status}"
+        )
+    
+    # Verificar se arquivo existe (problema comum no Render)
+    if not os.path.exists(video.file_path):
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "video_file_not_accessible",
+                "message": "Arquivo de vídeo não está acessível no momento.",
+                "reason": "Worker e Web Service rodam em containers separados no Render.",
+                "solution": "Configure storage persistente (S3, R2, ou Render Disk).",
+                "video_path": video.file_path,
+                "video_id": video_id
+            }
         )
     
     return FileResponse(
