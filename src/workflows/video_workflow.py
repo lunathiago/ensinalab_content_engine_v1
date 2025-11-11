@@ -64,22 +64,11 @@ class VideoGenerationWorkflow:
         # Decisão após revisão
         workflow.add_conditional_edges(
             "review",
-            self._should_await_approval,
+            self._should_finalize,
             {
-                "await_approval": "await_approval",
-                "finalize": "finalize"
-            }
-        )
-        
-        # Decisão após aprovação humana
-        workflow.add_conditional_edges(
-            "await_approval",
-            self._check_approval_status,
-            {
-                "approved": "finalize",
-                "rejected": END,
-                "needs_revision": "enhance_script",  # Loop de volta
-                "pending": "await_approval"  # Aguarda mais
+                "finalize": "finalize",
+                "needs_revision": "enhance_script",
+                "rejected": END
             }
         )
         
@@ -231,14 +220,15 @@ class VideoGenerationWorkflow:
             feedback.append(f"Qualidade abaixo do esperado ({state['quality_score']:.2f})")
             state['approval_status'] = 'needs_revision'
         else:
-            state['approval_status'] = 'pending'  # Precisa aprovação humana
+            # ✅ FIX: Aprovar automaticamente se passou na revisão
+            state['approval_status'] = 'approved'
         
         state['revision_feedback'] = feedback
         
         if feedback:
             print(f"   ⚠️ Issues encontrados: {len(feedback)}")
         else:
-            print(f"   ✓ Revisão automática OK")
+            print(f"   ✓ Revisão automática OK - Aprovado automaticamente")
         
         return state
     
@@ -271,15 +261,20 @@ class VideoGenerationWorkflow:
         
         return state
     
-    def _should_await_approval(self, state: VideoGenerationState) -> Literal["await_approval", "finalize"]:
-        """Decide se precisa de aprovação humana"""
-        if state['approval_status'] in ['pending', 'needs_revision', 'rejected']:
-            return "await_approval"
-        return "finalize"
-    
-    def _check_approval_status(self, state: VideoGenerationState) -> Literal["approved", "rejected", "needs_revision", "pending"]:
-        """Verifica status da aprovação"""
-        return state['approval_status']
+    def _should_finalize(self, state: VideoGenerationState) -> Literal["finalize", "needs_revision", "rejected"]:
+        """Decide próximo passo após revisão"""
+        status = state['approval_status']
+        
+        if status == 'approved':
+            return "finalize"
+        elif status == 'needs_revision':
+            # Verificar se já excedeu max_iterations
+            if state['refinement_iterations'] >= state['max_iterations']:
+                print(f"   ⚠️ Limite de iterações atingido ({state['max_iterations']})")
+                return "rejected"
+            return "needs_revision"
+        else:  # rejected
+            return "rejected"
     
     def run(
         self, 
