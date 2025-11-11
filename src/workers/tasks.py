@@ -228,20 +228,47 @@ def generate_video(self, video_id: int, generator_type: str = None):
         if result['success']:
             video_service.update_status(video_id, VideoStatus.PROCESSING, progress=0.9)
             
-            # Finalizar
-            video_service.complete_video(
+            # Upload para storage (R2/S3)
+            from src.utils.storage import get_storage
+            
+            storage = get_storage()
+            
+            # Upload vídeo
+            print(f"📤 Fazendo upload do vídeo para storage...")
+            video_url = storage.upload_video(
+                local_path=result['video_path'],
                 video_id=video_id,
-                file_path=result['video_path'],
-                file_size=result['metadata'].get('file_size', 0),
-                duration=result['metadata'].get('duration', 0),
-                thumbnail_path=result.get('thumbnail_path')
+                metadata={
+                    'title': briefing_data.get('title', f'Video {video_id}'),
+                    'duration': result['metadata'].get('duration', 0),
+                    'generator_type': generator_type
+                }
             )
             
-            print(f"✅ Vídeo {video_id} gerado com sucesso ({generator_type})!")
+            # Upload thumbnail (se existir)
+            thumbnail_url = None
+            if result.get('thumbnail_path'):
+                print(f"📤 Fazendo upload da thumbnail...")
+                thumbnail_url = storage.upload_thumbnail(
+                    local_path=result['thumbnail_path'],
+                    video_id=video_id
+                )
+            
+            # Finalizar com URLs do storage
+            video_service.complete_video(
+                video_id=video_id,
+                file_path=video_url,  # URL do R2/S3 (não path local)
+                file_size=result['metadata'].get('file_size', 0),
+                duration=result['metadata'].get('duration', 0),
+                thumbnail_path=thumbnail_url
+            )
+            
+            print(f"✅ Vídeo {video_id} gerado e armazenado com sucesso!")
+            print(f"   🔗 URL: {video_url[:80]}...")
             
             return {
                 "video_id": video_id,
-                "file_path": result['video_path'],
+                "file_path": video_url,
                 "duration": result['metadata'].get('duration'),
                 "generator_type": generator_type,
                 "metadata": result['metadata']

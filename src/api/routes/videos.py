@@ -83,14 +83,11 @@ async def download_video(
     
     **Requer autenticação** e **ownership** do vídeo
     
-    IMPORTANTE: No Render, worker e web service são containers separados.
-    O vídeo é gerado pelo worker mas não é acessível pelo web service.
-    
-    Soluções:
-    - Migrar para S3/R2 (recomendado para produção)
-    - Usar Persistent Disk do Render (temporário)
+    Se vídeo está em storage externo (R2/S3), redireciona para URL.
+    Se local (desenvolvimento), serve arquivo diretamente.
     """
     import os
+    from fastapi.responses import RedirectResponse
     
     video_id = decode_id(video_hash)
     if not video_id:
@@ -117,15 +114,24 @@ async def download_video(
             detail=f"Vídeo ainda não está pronto. Status: {video.status}"
         )
     
-    # Verificar se arquivo existe (problema comum no Render)
+    # Verificar se é URL externa (R2/S3) ou path local
+    if video.file_path.startswith(("http://", "https://")):
+        # Storage externo - redirecionar
+        print(f"🔗 Redirecionando para storage: {video.file_path[:60]}...")
+        return RedirectResponse(
+            url=video.file_path,
+            status_code=307  # Temporary Redirect (mantém método GET)
+        )
+    
+    # Path local - servir arquivo (desenvolvimento)
     if not os.path.exists(video.file_path):
         raise HTTPException(
             status_code=503,
             detail={
                 "error": "video_file_not_accessible",
                 "message": "Arquivo de vídeo não está acessível no momento.",
-                "reason": "Worker e Web Service rodam em containers separados no Render.",
-                "solution": "Configure storage persistente (S3, R2, ou Render Disk).",
+                "reason": "Storage não configurado ou arquivo não encontrado.",
+                "solution": "Configure R2_ACCESS_KEY_ID para usar Cloudflare R2.",
                 "video_path": video.file_path,
                 "video_id": video_id
             }
