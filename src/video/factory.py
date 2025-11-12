@@ -1,9 +1,11 @@
 """
 Factory para criar geradores de vídeo
 """
+import os
 from typing import Dict, Optional
 from src.video.base_generator import BaseVideoGenerator
 from src.video.simple_generator import SimpleVideoGenerator
+from src.video.shotstack_generator import ShotstackGenerator
 from src.video.avatar_generator import AvatarVideoGenerator
 from src.video.ai_generator import AIVideoGenerator
 
@@ -12,14 +14,16 @@ class VideoGeneratorFactory:
     """
     Factory para criar geradores de vídeo dinamicamente
     
-    Suporta 3 tipos:
-    - simple: TTS + Slides (barato, rápido)
+    Suporta 4 tipos:
+    - shotstack: Cloud rendering (10-20x mais rápido, recomendado) ⭐
+    - simple: TTS + Slides local (fallback, lento)
     - avatar: Apresentador virtual (profissional)
     - ai: IA generativa (experimental, caro)
     """
     
     # Registro de geradores disponíveis
     _generators = {
+        'shotstack': ShotstackGenerator,
         'simple': SimpleVideoGenerator,
         'avatar': AvatarVideoGenerator,
         'ai': AIVideoGenerator
@@ -28,7 +32,7 @@ class VideoGeneratorFactory:
     @classmethod
     def create(
         cls, 
-        generator_type: str = 'simple',
+        generator_type: str = 'auto',
         provider: Optional[str] = None,
         **kwargs
     ) -> BaseVideoGenerator:
@@ -36,7 +40,8 @@ class VideoGeneratorFactory:
         Cria um gerador de vídeo
         
         Args:
-            generator_type: Tipo do gerador ('simple', 'avatar', 'ai')
+            generator_type: Tipo do gerador ('auto', 'shotstack', 'simple', 'avatar', 'ai')
+                - 'auto': Escolhe melhor disponível (Shotstack > Simple)
             provider: Provider específico (ex: 'heygen', 'd-id', 'kling', 'runway')
             **kwargs: Argumentos adicionais para o gerador
             
@@ -49,6 +54,13 @@ class VideoGeneratorFactory:
         
         generator_type = generator_type.lower()
         
+        # Auto-detecção: usar Shotstack se configurado, senão Simple
+        if generator_type == 'auto':
+            if os.getenv("SHOTSTACK_API_KEY"):
+                generator_type = 'shotstack'
+            else:
+                generator_type = 'simple'
+        
         if generator_type not in cls._generators:
             raise ValueError(
                 f"Tipo '{generator_type}' não suportado. "
@@ -58,7 +70,10 @@ class VideoGeneratorFactory:
         generator_class = cls._generators[generator_type]
         
         # Instanciar com provider se aplicável
-        if generator_type == 'simple':
+        if generator_type == 'shotstack':
+            return generator_class()
+        
+        elif generator_type == 'simple':
             tts_provider = provider or kwargs.get('tts_provider', 'auto')
             return generator_class(tts_provider=tts_provider)
         
@@ -82,13 +97,23 @@ class VideoGeneratorFactory:
             Dict com tipos, providers e custos estimados
         """
         return {
+            'shotstack': {
+                'name': 'Shotstack Cloud (Recomendado)',
+                'providers': ['shotstack'],
+                'cost_per_min': 0.10,
+                'speed': 'muito rápido (1-2 min)',
+                'quality': 'alta',
+                'best_for': 'produção, escalabilidade',
+                'requires': 'SHOTSTACK_API_KEY'
+            },
             'simple': {
                 'name': 'Simples (TTS + Slides)',
                 'providers': ['google', 'elevenlabs'],
                 'cost_per_min': 0.05,
-                'speed': 'rápido (1-2 min)',
+                'speed': 'lento (5-15 min)',
                 'quality': 'básica',
-                'best_for': 'MVPs, conteúdo informativo'
+                'best_for': 'desenvolvimento, testes',
+                'requires': 'CPU local'
             },
             'avatar': {
                 'name': 'Avatar Virtual',
@@ -96,7 +121,8 @@ class VideoGeneratorFactory:
                 'cost_per_min': 5.0,
                 'speed': 'médio (3-5 min)',
                 'quality': 'profissional',
-                'best_for': 'vídeos educacionais, treinamentos'
+                'best_for': 'vídeos educacionais, treinamentos',
+                'requires': 'HeyGen ou D-ID API'
             },
             'ai': {
                 'name': 'IA Generativa',
@@ -104,7 +130,8 @@ class VideoGeneratorFactory:
                 'cost_per_min': 50.0,
                 'speed': 'lento (10-20 min)',
                 'quality': 'cinematográfica',
-                'best_for': 'conteúdo premium, marketing'
+                'best_for': 'conteúdo premium, marketing',
+                'requires': 'Kling ou Runway API'
             }
         }
     
@@ -127,7 +154,11 @@ class VideoGeneratorFactory:
             Tipo de gerador recomendado
         """
         
-        # Lógica de recomendação
+        # Sempre preferir Shotstack se disponível (melhor custo-benefício)
+        if os.getenv("SHOTSTACK_API_KEY") and budget_usd >= 0.10:
+            return 'shotstack'
+        
+        # Lógica de recomendação para outros geradores
         if budget_usd < 2:
             return 'simple'
         
@@ -148,6 +179,11 @@ class VideoGeneratorFactory:
 
 
 # Atalhos para criação rápida
+def create_shotstack_generator() -> ShotstackGenerator:
+    """Atalho para criar gerador Shotstack (cloud rendering)"""
+    return VideoGeneratorFactory.create('shotstack')
+
+
 def create_simple_generator(tts_provider: str = 'auto') -> SimpleVideoGenerator:
     """Atalho para criar gerador simples (auto-detecta melhor TTS)"""
     return VideoGeneratorFactory.create('simple', provider=tts_provider)

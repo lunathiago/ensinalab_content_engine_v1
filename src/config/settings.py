@@ -75,6 +75,11 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "/tmp/ensinalab_uploads"
     VIDEO_OUTPUT_DIR: str = "/tmp/ensinalab_videos"
     
+    # Shotstack (Cloud Video Rendering)
+    SHOTSTACK_API_KEY: Optional[str] = None
+    SHOTSTACK_API_URL: str = "https://api.shotstack.io/v1"
+    SHOTSTACK_STAGE: str = "stage"  # "stage" (sandbox) ou "v1" (production)
+    
     # Celery
     CELERY_BROKER_URL: str = ""
     CELERY_RESULT_BACKEND: str = ""
