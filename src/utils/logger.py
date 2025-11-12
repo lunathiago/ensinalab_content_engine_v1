@@ -28,6 +28,20 @@ def setup_logger(name: str, level=logging.INFO):
     return logger
 
 
+def get_logger(name: str, level=logging.INFO):
+    """
+    Obtém ou cria logger (alias para setup_logger para compatibilidade)
+    
+    Args:
+        name: Nome do logger (geralmente __name__)
+        level: Nível de log (default: INFO)
+    
+    Returns:
+        Logger configurado
+    """
+    return setup_logger(name, level)
+
+
 # Logger específico para eventos de segurança
 security_logger = setup_logger("security", level=logging.WARNING)
 
