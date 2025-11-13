@@ -62,7 +62,7 @@ class BriefingAnalysisWorkflow:
         return state
     
     def _generate_node(self, state: BriefingAnalysisState) -> BriefingAnalysisState:
-        """Nó 2: Geração de opções"""
+        """Nó 2: Geração de opções (3-6 opções)"""
         print(f"✨ Gerando opções...")
         
         try:

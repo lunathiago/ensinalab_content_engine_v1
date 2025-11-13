@@ -23,7 +23,7 @@ celery_app.conf.update(
     timezone='America/Sao_Paulo',
     enable_utc=True,
     task_track_started=True,
-    task_time_limit=1800,  # 30 minutos limite por task
+    task_time_limit=300,  # 5 minutos limite por task
     worker_prefetch_multiplier=1,  # Processar uma task por vez
 )
 

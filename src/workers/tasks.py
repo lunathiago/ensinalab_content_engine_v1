@@ -41,9 +41,9 @@ class DatabaseTask(Task):
     base=DatabaseTask, 
     bind=True,
     autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=180,
-    retry_jitter=True,
+    retry_backoff=True,  # Backoff exponencial: 2^retry_num segundos
+    retry_backoff_max=10,  # Máximo de 180s entre retries
+    retry_jitter=True,  # Adiciona aleatoriedade para evitar thundering herd
     max_retries=2,
     acks_late=True,
     reject_on_worker_lost=True
@@ -119,9 +119,9 @@ def generate_options(self, briefing_id: int):
     base=DatabaseTask, 
     bind=True,
     autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=300,
-    retry_jitter=True,
+    retry_backoff=True,  # Backoff exponencial: 2^retry_num segundos
+    retry_backoff_max=300,  # Máximo de 300s (5min) entre retries
+    retry_jitter=True,  # Adiciona aleatoriedade para evitar thundering herd
     max_retries=3,
     acks_late=True,
     reject_on_worker_lost=True
