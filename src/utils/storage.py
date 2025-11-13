@@ -4,6 +4,7 @@ Suporta: Cloudflare R2, AWS S3, Local Filesystem
 """
 import os
 import boto3
+import unicodedata
 from pathlib import Path
 from typing import Optional, Dict
 from botocore.exceptions import ClientError
@@ -63,6 +64,41 @@ class VideoStorage:
         
         print(f"   ✓ S3 Bucket: {self.bucket}")
     
+    def _sanitize_metadata(self, metadata: Dict) -> Dict:
+        """
+        Remove caracteres não-ASCII dos metadados S3/R2
+        
+        S3/R2 metadata só aceita ASCII. Remove acentos e caracteres especiais.
+        
+        Args:
+            metadata: Dicionário com metadados originais
+        
+        Returns:
+            Dicionário com valores sanitizados (apenas ASCII)
+        """
+        sanitized = {}
+        
+        for key, value in metadata.items():
+            # Converter valor para string
+            str_value = str(value)
+            
+            # Normalizar Unicode (NFD = Normalization Form Decomposed)
+            # Exemplo: "á" vira "a" + "´" (acento separado)
+            nfd = unicodedata.normalize('NFD', str_value)
+            
+            # Remover marcas diacríticas (acentos, til, cedilha)
+            ascii_value = ''.join(
+                char for char in nfd 
+                if unicodedata.category(char) != 'Mn'  # Mn = Nonspacing Mark
+            )
+            
+            # Garantir apenas ASCII (remover qualquer caractere > 127)
+            ascii_value = ascii_value.encode('ascii', 'ignore').decode('ascii')
+            
+            sanitized[key] = ascii_value
+        
+        return sanitized
+    
     def upload_video(
         self, 
         local_path: str, 
@@ -96,9 +132,13 @@ class VideoStorage:
             }
             
             if metadata:
-                extra_args['Metadata'] = {
-                    k: str(v) for k, v in metadata.items()
-                }
+                # Sanitizar metadados (S3 só aceita ASCII)
+                sanitized = self._sanitize_metadata(metadata)
+                extra_args['Metadata'] = sanitized
+                
+                # Log se houve mudanças
+                if any(sanitized[k] != str(metadata[k]) for k in metadata.keys()):
+                    print(f"   ⚠️  Metadados sanitizados (acentos removidos)")
             
             # Upload
             print(f"   📤 Uploading para {self.bucket}/{key}...")
@@ -138,7 +178,50 @@ class VideoStorage:
             return url
             
         except ClientError as e:
-            print(f"   ❌ Erro no upload: {e}")
+            error_msg = str(e)
+            print(f"   ❌ Erro no upload: {error_msg}")
+            
+            # Se erro de validação de metadados, tentar novamente SEM metadata
+            if "Parameter validation failed" in error_msg or "Non ascii" in error_msg:
+                print(f"   🔄 Tentando novamente sem metadados...")
+                try:
+                    self.client.upload_file(
+                        local_path,
+                        self.bucket,
+                        key,
+                        ExtraArgs={
+                            'ContentType': 'video/mp4',
+                            'CacheControl': 'max-age=31536000'
+                        }
+                    )
+                    
+                    # Gerar URL normalmente
+                    if self.use_r2 and self.public_url:
+                        url = f"{self.public_url}/{key}"
+                    elif self.use_r2:
+                        account_id = os.getenv("R2_ACCOUNT_ID")
+                        url = f"https://pub-{account_id}.r2.dev/{key}"
+                    else:
+                        url = self.client.generate_presigned_url(
+                            'get_object',
+                            Params={'Bucket': self.bucket, 'Key': key},
+                            ExpiresIn=86400
+                        )
+                    
+                    print(f"   ✅ Upload concluído (sem metadata): {url[:60]}...")
+                    
+                    # Deletar arquivo local
+                    try:
+                        os.remove(local_path)
+                        print(f"   🗑️  Arquivo local deletado: {local_path}")
+                    except:
+                        pass
+                    
+                    return url
+                    
+                except Exception as retry_error:
+                    print(f"   ❌ Retry falhou: {retry_error}")
+            
             # Fallback: retornar path local
             return local_path
         except Exception as e:
