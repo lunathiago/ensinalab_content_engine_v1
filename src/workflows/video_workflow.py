@@ -345,6 +345,8 @@ class VideoGenerationWorkflow:
             "audio_path": None,
             "video_path": None,
             "thumbnail_path": None,
+            "duration": None,  # 🔧 FIX: Adicionar duration ao estado inicial
+            "file_size": None,  # 🔧 FIX: Adicionar file_size ao estado inicial
             "revision_feedback": [],
             "approval_status": "pending",
             "human_feedback": None,

@@ -39,6 +39,8 @@ class VideoGenerationState(TypedDict):
     audio_path: Optional[str]
     video_path: Optional[str]
     thumbnail_path: Optional[str]
+    duration: Optional[float]  # Duração do vídeo em segundos
+    file_size: Optional[int]  # Tamanho do arquivo em bytes
     
     # Revisão e Aprovação
     revision_feedback: List[str]
