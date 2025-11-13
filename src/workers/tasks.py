@@ -274,7 +274,19 @@ def generate_video(self, video_id: int, generator_type: str = None):
                 "metadata": result['metadata']
             }
         else:
-            raise Exception(f"Workflow falhou: {result.get('error')}")
+            # 🔧 FIX: Mensagem de erro mais informativa
+            error_details = result.get('error', 'Motivo desconhecido')
+            status = result.get('status', 'unknown')
+            metadata = result.get('metadata', {})
+            
+            error_msg = f"Workflow não completou (status: {status})"
+            if error_details and error_details != 'None':
+                error_msg += f" - {error_details}"
+            if metadata.get('current_step'):
+                error_msg += f" (parou em: {metadata['current_step']})"
+            
+            print(f"   ❌ Detalhes: {error_msg}")
+            raise Exception(error_msg)
         
     except Exception as e:
         print(f"❌ Erro ao gerar vídeo: {e}")
