@@ -290,3 +290,81 @@ async def reject_video(
         "feedback": feedback
     }
 
+
+@router.post("/videos/{video_hash}/cancel")
+async def cancel_video(
+    video_hash: str,  # Hash ofuscado
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Cancela a geração de um vídeo em andamento
+    
+    **Requer autenticação** e **ownership** do vídeo
+    
+    Útil para interromper vídeos que estão demorando demais ou travados.
+    Revoga a task do Celery e atualiza o status para "cancelled".
+    """
+    from src.workers.celery_config import celery_app
+    from celery.result import AsyncResult
+    
+    video_id = decode_id(video_hash)
+    if not video_id:
+        raise HTTPException(404, "Vídeo não encontrado")
+    
+    service = VideoService(db)
+    video = service.get_video(video_id)
+    
+    if not video:
+        raise HTTPException(status_code=404, detail="Vídeo não encontrado")
+    
+    # Verificar ownership
+    if video.option.briefing.user_id != current_user.id:
+        log_security_event("unauthorized_video_access", {
+            "user_id": current_user.id,
+            "video_id": video_id,
+            "action": "cancel"
+        })
+        raise HTTPException(404, "Vídeo não encontrado")
+    
+    # Apenas vídeos em processamento podem ser cancelados
+    if video.status not in ["queued", "processing", "pending_approval"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Vídeo não pode ser cancelado. Status atual: {video.status}"
+        )
+    
+    # Revogar task do Celery se tiver task_id
+    revoked = False
+    if video.task_id:
+        try:
+            celery_app.control.revoke(
+                video.task_id,
+                terminate=True,  # Força término imediato
+                signal='SIGKILL'  # Mata o processo
+            )
+            revoked = True
+            print(f"✓ Task {video.task_id} revogada")
+        except Exception as e:
+            print(f"⚠️ Erro ao revogar task: {e}")
+    
+    # Atualizar status no banco
+    video.status = "cancelled"
+    video.error_message = "Cancelado pelo usuário"
+    video.progress = 0
+    db.commit()
+    
+    log_security_event("video_cancelled", {
+        "user_id": current_user.id,
+        "video_id": video_id,
+        "task_id": video.task_id,
+        "revoked": revoked
+    })
+    
+    return {
+        "video_id": video_id,
+        "message": "Vídeo cancelado com sucesso",
+        "task_revoked": revoked,
+        "status": "cancelled"
+    }
+

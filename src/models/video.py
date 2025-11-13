@@ -13,6 +13,7 @@ class VideoStatus(str, enum.Enum):
     PROCESSING = "processing"  # Sendo gerado
     COMPLETED = "completed"  # Pronto
     FAILED = "failed"  # Erro
+    CANCELLED = "cancelled"  # Cancelado pelo usuário
 
 class Video(Base):
     """

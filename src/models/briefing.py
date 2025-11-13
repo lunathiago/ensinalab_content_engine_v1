@@ -14,6 +14,7 @@ class BriefingStatus(str, enum.Enum):
     OPTIONS_READY = "options_ready"  # Opções prontas para escolha
     COMPLETED = "completed"  # Vídeo gerado
     FAILED = "failed"  # Erro
+    CANCELLED = "cancelled"  # Cancelado pelo usuário
 
 class Briefing(Base):
     """
@@ -38,6 +39,9 @@ class Briefing(Base):
     training_goal = Column(Text)  # Objetivo do treinamento/capacitação
     duration_minutes = Column(Integer)  # Duração desejada em minutos
     tone = Column(String(100))  # Ex: "formal", "prático", "inspiracional", "técnico"
+    
+    # Celery task
+    task_id = Column(String(255))  # ID da task Celery para geração de opções
     
     # Metadata
     status = Column(SQLEnum(BriefingStatus), default=BriefingStatus.PENDING)

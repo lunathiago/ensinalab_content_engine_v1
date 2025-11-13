@@ -177,3 +177,76 @@ async def regenerate_options(
         "message": "Gerando novas opções...",
         "briefing_id": encode_id(briefing_id)
     }
+
+
+@router.post("/briefings/{briefing_hash}/cancel-generation")
+async def cancel_option_generation(
+    briefing_hash: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Cancela a geração de opções em andamento para um briefing
+    
+    **Requer autenticação** e **ownership** do briefing
+    
+    Útil para interromper processos que estão demorando demais ou travados.
+    Revoga a task do Celery e atualiza o status do briefing.
+    """
+    from src.workers.celery_config import celery_app
+    
+    briefing_id = decode_id(briefing_hash)
+    if not briefing_id:
+        raise HTTPException(404, "Briefing não encontrado")
+    
+    # Verificar se briefing existe e pertence ao usuário
+    briefing = db.query(Briefing).filter(Briefing.id == briefing_id).first()
+    
+    if not briefing or briefing.user_id != current_user.id:
+        log_security_event("unauthorized_cancel_attempt", {
+            "user_id": current_user.id,
+            "resource": "briefing",
+            "briefing_id": briefing_id,
+            "action": "cancel"
+        })
+        raise HTTPException(404, "Briefing não encontrado")
+    
+    # Apenas briefings em processamento podem ser cancelados
+    if briefing.status not in ["processing", "generating_options"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Briefing não está sendo processado. Status atual: {briefing.status}"
+        )
+    
+    # Revogar task do Celery se tiver task_id
+    revoked = False
+    if briefing.task_id:
+        try:
+            celery_app.control.revoke(
+                briefing.task_id,
+                terminate=True,
+                signal='SIGKILL'
+            )
+            revoked = True
+            print(f"✓ Task {briefing.task_id} revogada")
+        except Exception as e:
+            print(f"⚠️ Erro ao revogar task: {e}")
+    
+    # Atualizar status no banco
+    briefing.status = "cancelled"
+    db.commit()
+    
+    log_security_event("briefing_cancelled", {
+        "user_id": current_user.id,
+        "briefing_id": briefing_id,
+        "task_id": briefing.task_id,
+        "revoked": revoked
+    })
+    
+    from src.utils.hashid import encode_id
+    return {
+        "briefing_id": encode_id(briefing_id),
+        "message": "Geração de opções cancelada com sucesso",
+        "task_revoked": revoked,
+        "status": "cancelled"
+    }
