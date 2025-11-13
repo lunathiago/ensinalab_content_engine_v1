@@ -22,7 +22,7 @@ class SimpleVideoGenerator(BaseVideoGenerator):
     Gerador simples com TTS + slides estáticos
     
     Features:
-    - Text-to-Speech (ElevenLabs ou Google)
+    - Text-to-Speech (ElevenLabs)
     - Slides automáticos baseados no script
     - Legendas sincronizadas
     - Transições suaves
@@ -295,15 +295,15 @@ class SimpleVideoGenerator(BaseVideoGenerator):
     
     def estimate_cost(self, script: str, duration_minutes: int) -> float:
         """Estima custo"""
-        # Google TTS: ~$0.016/min (Character rate: $16/1M characters)
+        # ElevenLabs: ~$0.30/1000 chars (Professional Voice)
         # MoviePy: grátis (processamento local)
         char_count = len(script)
-        tts_cost = (char_count / 1_000_000) * 16
+        tts_cost = (char_count / 1000) * 0.30
         processing_cost = 0.05  # Custo computacional negligível
         
         return max(tts_cost + processing_cost, 0.10)  # Mínimo $0.10
     
     def supports_language(self, language: str) -> bool:
-        """Suporta vários idiomas via Google TTS"""
+        """Suporta vários idiomas via ElevenLabs"""
         supported = ['pt-BR', 'pt-PT', 'en-US', 'en-GB', 'es-ES', 'es-MX', 'fr-FR', 'de-DE', 'it-IT']
         return language in supported

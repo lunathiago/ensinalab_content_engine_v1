@@ -31,22 +31,18 @@ class TTSService:
         """
         Detecta o melhor provider baseado nas credenciais disponíveis
         
-        Prioridade: ElevenLabs > Google > Amazon > Azure > Fallback
+        Prioridade: ElevenLabs > Fallback
+        (Google TTS removido - usar apenas ElevenLabs)
         """
         if requested_provider.lower() != "auto":
             return requested_provider.lower()
         
-        # Verificar credenciais na ordem de prioridade
+        # 🔧 FIX: Apenas ElevenLabs ou fallback
+        # Google Cloud TTS removido da detecção automática
         if os.getenv("ELEVENLABS_API_KEY"):
             return "elevenlabs"
-        elif os.getenv("GOOGLE_CLOUD_API_KEY") or os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-            return "google"
-        elif os.getenv("AWS_ACCESS_KEY_ID"):
-            return "amazon"
-        elif os.getenv("AZURE_SPEECH_KEY"):
-            return "azure"
         else:
-            print("   ⚠️ Nenhuma credencial TTS encontrada, usando fallback")
+            print("   ⚠️ ELEVENLABS_API_KEY não encontrada, usando fallback (silêncio)")
             return "fallback"
     
     def _get_api_key(self, provider: str) -> Optional[str]:
@@ -79,10 +75,14 @@ class TTSService:
             Caminho do arquivo de áudio gerado
         """
         
+        # 🔧 FIX: Avisar se Google TTS for chamado
+        if self.provider == "google":
+            print("   ⚠️ Google TTS não está configurado. Use ElevenLabs.")
+            print("   → Gerando fallback (silêncio)...")
+            return self._generate_fallback_audio(output_path, len(text))
+        
         if self.provider == "elevenlabs":
             return self._generate_elevenlabs(text, output_path, voice)
-        elif self.provider == "google":
-            return self._generate_google(text, output_path, voice, speed)
         elif self.provider == "amazon":
             return self._generate_amazon(text, output_path, voice)
         elif self.provider == "azure":
@@ -92,42 +92,14 @@ class TTSService:
             return self._generate_fallback(text, output_path)
     
     def _generate_google(self, text: str, output_path: str, voice: str, speed: float) -> str:
-        """Gera com Google Cloud TTS"""
-        try:
-            from google.cloud import texttospeech
-            
-            client = texttospeech.TextToSpeechClient()
-            
-            # Mapear voz
-            language_code = voice.split('-')[0] + '-' + voice.split('-')[1]  # pt-BR
-            
-            synthesis_input = texttospeech.SynthesisInput(text=text)
-            
-            voice_params = texttospeech.VoiceSelectionParams(
-                language_code=language_code,
-                name=voice
-            )
-            
-            audio_config = texttospeech.AudioConfig(
-                audio_encoding=texttospeech.AudioEncoding.MP3,
-                speaking_rate=speed
-            )
-            
-            response = client.synthesize_speech(
-                input=synthesis_input,
-                voice=voice_params,
-                audio_config=audio_config
-            )
-            
-            with open(output_path, 'wb') as f:
-                f.write(response.audio_content)
-            
-            print(f"   ✓ Google TTS: {output_path}")
-            return output_path
-            
-        except Exception as e:
-            print(f"   ⚠️ Google TTS falhou: {e}, usando fallback")
-            return self._generate_fallback(text, output_path)
+        """
+        Google TTS foi desabilitado.
+        Use ElevenLabs configurando ELEVENLABS_API_KEY.
+        """
+        print(f"   ❌ Google TTS não está mais suportado neste projeto")
+        print(f"   → Configure ELEVENLABS_API_KEY para usar ElevenLabs")
+        print(f"   → Gerando fallback (silêncio)...")
+        return self._generate_fallback(text, output_path)
     
     def _generate_elevenlabs(self, text: str, output_path: str, voice: str) -> str:
         """Gera com ElevenLabs (melhor qualidade para português)"""
@@ -174,14 +146,9 @@ class TTSService:
             return output_path
             
         except Exception as e:
-            print(f"   ⚠️ ElevenLabs falhou: {e}")
-            print(f"   → Tentando fallback para Google TTS...")
-            # Fallback para Google se disponível
-            try:
-                return self._generate_google(text, output_path, voice, 1.0)
-            except:
-                print(f"   → Google também falhou, gerando fallback...")
-                return self._generate_fallback(text, output_path)
+            print(f"   ❌ ElevenLabs falhou: {e}")
+            print(f"   → Gerando fallback (silêncio)...")
+            return self._generate_fallback(text, output_path)
     
     def _generate_amazon(self, text: str, output_path: str, voice: str) -> str:
         """Gera com Amazon Polly"""

@@ -108,12 +108,12 @@ class VideoGeneratorFactory:
             },
             'simple': {
                 'name': 'Simples (TTS + Slides)',
-                'providers': ['google', 'elevenlabs'],
+                'providers': ['elevenlabs'],  # 🔧 Apenas ElevenLabs
                 'cost_per_min': 0.05,
                 'speed': 'lento (5-15 min)',
                 'quality': 'básica',
                 'best_for': 'desenvolvimento, testes',
-                'requires': 'CPU local'
+                'requires': 'ELEVENLABS_API_KEY'
             },
             'avatar': {
                 'name': 'Avatar Virtual',

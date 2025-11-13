@@ -84,10 +84,14 @@ class VideoGeneratorConfig:
         tone = briefing_data.get('tone', 'profissional')
         subject = briefing_data.get('subject_area', '')
         
+        # 🔧 FIX: Sempre usar ElevenLabs para simple generator
+        # Não forçar Google TTS
+        default_tts = os.getenv('SIMPLE_GENERATOR_TTS_PROVIDER', 'elevenlabs')
+        
         # Lógica de recomendação
         if duration <= 5:
-            # Vídeos curtos: simple é suficiente
-            return {'generator_type': 'simple', 'provider': 'google'}
+            # Vídeos curtos: simple com TTS configurado
+            return {'generator_type': 'simple', 'provider': default_tts}
         
         if tone in ['profissional', 'técnico']:
             # Tom profissional: avatar recomendado
@@ -97,8 +101,8 @@ class VideoGeneratorConfig:
             # Conteúdo premium ou longo: considerar AI
             return {'generator_type': 'ai', 'provider': 'kling'}
         
-        # Default: avatar (melhor custo-benefício)
-        return {'generator_type': 'avatar', 'provider': 'd-id'}
+        # Default: simple com TTS configurado
+        return {'generator_type': 'simple', 'provider': default_tts}
     
     @classmethod
     def estimate_cost(cls, generator_type: str, duration_minutes: int) -> float:
