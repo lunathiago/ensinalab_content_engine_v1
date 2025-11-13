@@ -1,15 +1,192 @@
-# Endpoints de Cancelamento
+# Endpoints de Cancelamento e Monitoramento
 
-Documentação dos endpoints para cancelar processos em andamento quando estiverem demorando demais ou travados.
+Documentação dos endpoints para monitorar e cancelar processos em andamento quando estiverem demorando demais ou travados.
 
 ## 📌 Visão Geral
 
-Foram adicionados dois endpoints para matar processos que estão demorando muito:
+O sistema oferece endpoints completos para gerenciamento de tasks assíncronas:
 
-1. **Cancelar geração de vídeo** - Para vídeos travados ou muito lentos
-2. **Cancelar geração de opções** - Para briefings travados no processamento
+1. **Listar processos em andamento** - Visão geral de todas as tasks ativas
+2. **Verificar status de task específica** - Detalhes diretos do Celery
+3. **Cancelar geração de vídeo** - Para vídeos travados ou muito lentos
+4. **Cancelar geração de opções** - Para briefings travados no processamento
+5. **Cancelar todas as tasks** - "Botão de emergência" para reiniciar tudo
 
-Ambos usam `celery.control.revoke()` com `SIGKILL` para forçar o término imediato da task.
+Todos usam `celery.control.revoke()` com `SIGKILL` para forçar o término imediato da task.
+
+---
+
+## 📊 Listar Processos em Andamento
+
+### `GET /tasks/active`
+
+Lista todos os processos em andamento do usuário autenticado.
+
+#### Autenticação
+- ✅ Requer JWT token
+- ✅ Retorna apenas tasks do usuário logado
+
+#### Resposta de Sucesso
+
+```json
+{
+  "total": 3,
+  "tasks": [
+    {
+      "type": "video",
+      "resource_type": "video",
+      "resource_id": "aB3xY9",
+      "title": "Como usar Google Classroom",
+      "status": "processing",
+      "progress": 0.7,
+      "created_at": "2025-11-13T10:30:00Z",
+      "elapsed_time": {
+        "seconds": 145,
+        "formatted": "2m 25s",
+        "is_stuck": false
+      },
+      "task_id": "550e8400-e29b-41d4-a716-446655440000",
+      "celery_status": {
+        "state": "STARTED",
+        "ready": false,
+        "successful": null,
+        "failed": null
+      },
+      "generator_type": "simple",
+      "can_cancel": true
+    },
+    {
+      "type": "briefing",
+      "resource_type": "briefing",
+      "resource_id": "xY5zA2",
+      "title": "Gestão de Sala de Aula",
+      "status": "processing",
+      "created_at": "2025-11-13T10:28:00Z",
+      "elapsed_time": {
+        "seconds": 265,
+        "formatted": "4m 25s",
+        "is_stuck": false
+      },
+      "task_id": "660e8400-e29b-41d4-a716-446655440001",
+      "celery_status": {
+        "state": "STARTED",
+        "ready": false,
+        "successful": null,
+        "failed": null
+      },
+      "can_cancel": true
+    }
+  ],
+  "summary": {
+    "briefings": 1,
+    "videos": 2
+  }
+}
+```
+
+#### Exemplo de Uso
+
+```bash
+curl -X GET "https://api.ensinalab.com/tasks/active" \
+  -H "Authorization: Bearer {token}"
+```
+
+#### Detalhes dos Campos
+
+- **type**: `"briefing"` ou `"video"`
+- **resource_id**: Hash ofuscado do recurso
+- **status**: Status no banco de dados
+- **progress**: 0.0 a 1.0 (apenas para vídeos)
+- **elapsed_time.is_stuck**: `true` se > 5 minutos (task_time_limit)
+- **celery_status.state**: `PENDING`, `STARTED`, `SUCCESS`, `FAILURE`, `RETRY`, `REVOKED`
+- **can_cancel**: Se é possível cancelar neste momento
+
+---
+
+## 🔍 Verificar Status de Task Específica
+
+### `GET /tasks/{task_id}/status`
+
+Obtém status detalhado diretamente do Celery para uma task específica.
+
+#### Autenticação
+- ✅ Requer JWT token
+
+#### Parâmetros
+- `task_id` (path): ID da task Celery (ex: `550e8400-e29b-41d4-a716-446655440000`)
+
+#### Resposta de Sucesso
+
+**Task em andamento:**
+```json
+{
+  "task_id": "550e8400-e29b-41d4-a716-446655440000",
+  "state": "STARTED",
+  "ready": false,
+  "successful": null,
+  "failed": null,
+  "info": {
+    "current": 50,
+    "total": 100
+  }
+}
+```
+
+**Task concluída:**
+```json
+{
+  "task_id": "550e8400-e29b-41d4-a716-446655440000",
+  "state": "SUCCESS",
+  "ready": true,
+  "successful": true,
+  "failed": false,
+  "result": {
+    "video_id": 123,
+    "status": "completed"
+  }
+}
+```
+
+**Task com erro:**
+```json
+{
+  "task_id": "550e8400-e29b-41d4-a716-446655440000",
+  "state": "FAILURE",
+  "ready": true,
+  "successful": false,
+  "failed": true,
+  "error": "ConnectionError: Failed to connect to OpenAI API",
+  "traceback": "Traceback (most recent call last):\n  File..."
+}
+```
+
+**Task cancelada:**
+```json
+{
+  "task_id": "550e8400-e29b-41d4-a716-446655440000",
+  "state": "REVOKED",
+  "ready": false,
+  "successful": null,
+  "failed": null,
+  "info": "Task foi cancelada"
+}
+```
+
+#### Exemplo de Uso
+
+```bash
+curl -X GET "https://api.ensinalab.com/tasks/550e8400-e29b-41d4-a716-446655440000/status" \
+  -H "Authorization: Bearer {token}"
+```
+
+#### Estados Possíveis
+
+- **PENDING**: Task não encontrada ou ainda não iniciada
+- **STARTED**: Em execução
+- **SUCCESS**: Concluída com sucesso
+- **FAILURE**: Falhou com erro
+- **RETRY**: Sendo retentada após erro
+- **REVOKED**: Cancelada/revogada
 
 ---
 
@@ -75,6 +252,53 @@ curl -X POST "https://api.ensinalab.com/videos/aB3xY9/cancel" \
 5. ✅ Define `error_message` como "Cancelado pelo usuário"
 6. ✅ Reseta `progress` para 0
 7. ✅ Registra evento de segurança
+
+---
+
+## 🚨 Cancelar Todas as Tasks
+
+### `POST /tasks/cancel-all`
+
+Cancela **TODAS** as tasks em andamento do usuário.
+
+#### Autenticação
+- ✅ Requer JWT token
+- ✅ Cancela apenas tasks do usuário logado
+
+#### ⚠️ Atenção
+Este é um "botão de emergência" que cancela:
+- ✅ Todos os briefings sendo processados
+- ✅ Todos os vídeos sendo gerados
+
+Use apenas quando realmente necessário!
+
+#### Resposta de Sucesso
+
+```json
+{
+  "message": "5 tasks canceladas com sucesso",
+  "cancelled": {
+    "briefings": ["xY5zA2", "aB3xY9"],
+    "videos": ["pQ8mN1", "wE4rT5", "zX9cV3"],
+    "total": 5
+  }
+}
+```
+
+#### Exemplo de Uso
+
+```bash
+curl -X POST "https://api.ensinalab.com/tasks/cancel-all" \
+  -H "Authorization: Bearer {token}"
+```
+
+#### O Que Acontece
+
+1. ✅ Busca todos os briefings em `processing` ou `generating_options`
+2. ✅ Busca todos os vídeos em `queued`, `processing` ou `pending_approval`
+3. ✅ Revoga todas as tasks do Celery com `SIGKILL`
+4. ✅ Atualiza status para `cancelled` no banco
+5. ✅ Registra evento de segurança com contadores
 
 ---
 

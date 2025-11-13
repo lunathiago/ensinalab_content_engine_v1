@@ -7,7 +7,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from src.config.settings import settings
 from src.config.rate_limit import limiter
-from src.api.routes import auth, briefings, options, videos, health
+from src.api.routes import auth, briefings, options, videos, health, tasks
 
 # Importar models para registrá-los no SQLAlchemy Base
 from src.models.user import User
@@ -45,6 +45,7 @@ app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(briefings.router, prefix="/api/v1", tags=["Briefings"])
 app.include_router(options.router, prefix="/api/v1", tags=["Options"])
 app.include_router(videos.router, prefix="/api/v1", tags=["Videos"])
+app.include_router(tasks.router, prefix="/api/v1", tags=["Tasks"])
 
 @app.on_event("startup")
 async def startup_event():
