@@ -106,6 +106,14 @@ class TTSService:
         try:
             import requests
             
+            # 🔧 DEBUG: Verificar se API key está carregada
+            if not self.api_key:
+                print(f"   ❌ ELEVENLABS_API_KEY não está configurada!")
+                print(f"   → Verifique o arquivo .env")
+                return self._generate_fallback(text, output_path)
+            
+            print(f"   🔑 API Key carregada: {self.api_key[:10]}... (len={len(self.api_key)})")
+            
             # Vozes ElevenLabs com suporte a português
             voice_map = {
                 'pt-BR-FranciscaNeural': 'pNInz6obpgDQGcFmaJgB',  # Adam (versátil)
@@ -135,8 +143,16 @@ class TTSService:
             }
             
             print(f"   🎤 Gerando áudio com ElevenLabs (voz: {voice_id})...")
+            print(f"   🔗 URL: {url}")
+            print(f"   📝 Text length: {len(text)} chars")
             
             response = requests.post(url, json=data, headers=headers, timeout=300)
+            
+            # 🔧 DEBUG: Mostrar resposta detalhada em caso de erro
+            if response.status_code != 200:
+                print(f"   ❌ Status Code: {response.status_code}")
+                print(f"   ❌ Response: {response.text}")
+            
             response.raise_for_status()
             
             with open(output_path, 'wb') as f:

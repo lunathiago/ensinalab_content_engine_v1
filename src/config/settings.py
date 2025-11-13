@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-4"
     
+    # Text-to-Speech (TTS)
+    ELEVENLABS_API_KEY: Optional[str] = None
+    TTS_SERVICE: str = "elevenlabs"  # elevenlabs, google, amazon, azure, fallback
+    
     # CORS - aceita "*" ou lista de origens separadas por vírgula
     CORS_ORIGINS: str = "*"
     
