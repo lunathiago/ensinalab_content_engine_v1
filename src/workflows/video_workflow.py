@@ -185,11 +185,20 @@ class VideoGenerationWorkflow:
                 video_id=state['video_id']
             )
             
+            # 🔧 DEBUG: Log do resultado antes de atualizar o state
+            print(f"   [DEBUG] result keys: {list(result.keys())}")
+            print(f"   [DEBUG] result['duration'] = {result.get('duration', 'NOT_IN_RESULT')}")
+            print(f"   [DEBUG] result['file_size'] = {result.get('file_size', 'NOT_IN_RESULT')}")
+            
             if result['success']:
                 state['video_path'] = result['file_path']
                 state['thumbnail_path'] = result.get('thumbnail_path', '')
                 state['file_size'] = result.get('file_size', 0)
                 state['duration'] = result.get('duration', 0)
+                
+                # 🔧 DEBUG: Log do state após atualização
+                print(f"   [DEBUG] state['duration'] after update = {state['duration']}")
+                print(f"   [DEBUG] state['file_size'] after update = {state['file_size']}")
                 
                 # Adicionar metadata do gerador
                 if 'metadata' not in state:
@@ -216,6 +225,11 @@ class VideoGenerationWorkflow:
         
         state['current_step'] = 'reviewing'
         state['progress'] = 0.85
+        
+        # 🔧 DEBUG: Log do estado antes da revisão
+        print(f"   [DEBUG] state['duration'] = {state.get('duration', 'NOT_SET')}")
+        print(f"   [DEBUG] state['file_size'] = {state.get('file_size', 'NOT_SET')}")
+        print(f"   [DEBUG] state['video_path'] = {state.get('video_path', 'NOT_SET')}")
         
         # Revisão automática
         feedback = []
