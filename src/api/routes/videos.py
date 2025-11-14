@@ -115,13 +115,47 @@ async def download_video(
         )
     
     # Verificar se é URL externa (R2/S3) ou path local
-    if video.file_path.startswith(("http://", "https://")):
-        # Storage externo - redirecionar
-        print(f"🔗 Redirecionando para storage: {video.file_path[:60]}...")
-        return RedirectResponse(
-            url=video.file_path,
-            status_code=307  # Temporary Redirect (mantém método GET)
-        )
+    if video.file_path.startswith(("http://", "https://", "r2://", "s3://")):
+        # Storage externo - gerar presigned URL para download seguro
+        from src.utils.storage import get_storage
+        
+        storage = get_storage()
+        
+        # Se for r2:// ou s3://, extrair video_id do path
+        if video.file_path.startswith(("r2://", "s3://")):
+            # Formato: r2://bucket/videos/video_4.mp4
+            print(f"🔑 Detectado storage path: {video.file_path}")
+            presigned_url = storage.generate_presigned_download_url(
+                video_id=video_id,
+                expires_in=3600  # 1 hora
+            )
+        else:
+            # URL pública antiga - tentar gerar presigned URL mesmo assim
+            print(f"⚠️ URL pública detectada, gerando presigned URL...")
+            presigned_url = storage.generate_presigned_download_url(
+                video_id=video_id,
+                expires_in=3600
+            )
+        
+        if presigned_url:
+            print(f"🔐 Presigned URL gerada (válida por 1h)")
+            return RedirectResponse(
+                url=presigned_url,
+                status_code=307  # Temporary Redirect (mantém método GET)
+            )
+        else:
+            # Fallback: tentar URL direta (pode falhar se bucket privado)
+            if video.file_path.startswith(("http://", "https://")):
+                print(f"⚠️ Fallback: redirecionando para URL direta...")
+                return RedirectResponse(
+                    url=video.file_path,
+                    status_code=307
+                )
+            else:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Não foi possível gerar URL de download"
+                )
     
     # Path local - servir arquivo (desenvolvimento)
     if not os.path.exists(video.file_path):

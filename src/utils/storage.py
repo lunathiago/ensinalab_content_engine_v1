@@ -152,12 +152,12 @@ class VideoStorage:
             
             # Retornar URL
             if self.use_r2 and self.public_url:
-                # R2 com custom domain
+                # R2 com custom domain público
                 url = f"{self.public_url}/{key}"
             elif self.use_r2:
-                # R2 com URL padrão
-                account_id = os.getenv("R2_ACCOUNT_ID")
-                url = f"https://pub-{account_id}.r2.dev/{key}"
+                # R2 privado - salvar key com prefixo para identificação
+                # Endpoint de download gerará presigned URL on-demand
+                url = f"r2://{self.bucket}/{key}"
             else:
                 # S3 - gerar presigned URL (24h)
                 url = self.client.generate_presigned_url(
@@ -199,8 +199,7 @@ class VideoStorage:
                     if self.use_r2 and self.public_url:
                         url = f"{self.public_url}/{key}"
                     elif self.use_r2:
-                        account_id = os.getenv("R2_ACCOUNT_ID")
-                        url = f"https://pub-{account_id}.r2.dev/{key}"
+                        url = f"r2://{self.bucket}/{key}"
                     else:
                         url = self.client.generate_presigned_url(
                             'get_object',
@@ -345,14 +344,10 @@ class VideoStorage:
             key = f"videos/video_{video_id}.mp4"
             
             if self.use_r2 and self.public_url:
-                # URL pública permanente
+                # URL pública permanente (custom domain com acesso público)
                 return f"{self.public_url}/{key}"
-            elif self.use_r2:
-                # R2 sem custom domain - gerar presigned URL
-                account_id = os.getenv("R2_ACCOUNT_ID")
-                return f"https://pub-{account_id}.r2.dev/{key}"
             else:
-                # S3 - presigned URL temporária
+                # R2/S3 privado - gerar presigned URL temporária
                 return self.client.generate_presigned_url(
                     'get_object',
                     Params={'Bucket': self.bucket, 'Key': key},
@@ -361,6 +356,46 @@ class VideoStorage:
                 
         except Exception as e:
             print(f"   ⚠️ Erro ao gerar URL: {e}")
+            return None
+    
+    def generate_presigned_download_url(
+        self, 
+        video_id: int, 
+        expires_in: int = 3600
+    ) -> Optional[str]:
+        """
+        Gera presigned URL para download seguro do vídeo
+        
+        Args:
+            video_id: ID do vídeo
+            expires_in: Tempo de expiração em segundos (padrão 1h)
+        
+        Returns:
+            Presigned URL temporária ou None se falhar
+        """
+        
+        if self.use_local:
+            # Local não precisa de presigned URL
+            return None
+        
+        try:
+            key = f"videos/video_{video_id}.mp4"
+            
+            # Gerar presigned URL para download
+            url = self.client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': self.bucket,
+                    'Key': key,
+                    'ResponseContentDisposition': f'attachment; filename="video_{video_id}.mp4"'
+                },
+                ExpiresIn=expires_in
+            )
+            
+            return url
+            
+        except Exception as e:
+            print(f"   ⚠️ Erro ao gerar presigned URL: {e}")
             return None
     
     def check_bucket_exists(self) -> bool:
