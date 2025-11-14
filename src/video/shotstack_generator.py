@@ -73,6 +73,9 @@ class ShotstackGenerator(BaseVideoGenerator):
         try:
             logger.info(f"🎬 [ShotstackGenerator] Gerando vídeo {video_id}...")
             
+            # Armazenar metadata para uso nos métodos internos
+            self.metadata = metadata
+            
             # 1. Parsear script em slides
             slides = self._parse_script_to_slides(script)
             logger.info(f"   → {len(slides)} slides identificados")
@@ -301,6 +304,9 @@ class ShotstackGenerator(BaseVideoGenerator):
         
         Docs: https://shotstack.io/docs/guide/
         """
+        # Determinar orientação do vídeo
+        orientation = getattr(self, 'metadata', {}).get('video_orientation', 'horizontal')
+        
         # Calcular duração de cada slide (baseado no áudio total)
         # Assumir ~10s por slide como padrão
         slide_duration = 10.0
@@ -359,6 +365,15 @@ class ShotstackGenerator(BaseVideoGenerator):
             "length": len(slides) * slide_duration
         }
         
+        # Configurar resolução baseado na orientação
+        if orientation == 'vertical':
+            # Vertical 9:16 (Stories/Reels/TikTok)
+            # Shotstack usa formato "widthxheight"
+            output_resolution = "720x1280"
+        else:
+            # Horizontal 16:9 (YouTube/padrão)
+            output_resolution = "1280x720"
+        
         # Montar timeline completo
         timeline = {
             "timeline": {
@@ -374,7 +389,7 @@ class ShotstackGenerator(BaseVideoGenerator):
             },
             "output": {
                 "format": "mp4",
-                "resolution": "hd",  # 720p (ou "sd", "1080")
+                "resolution": output_resolution,  # Ajustado por orientação
                 "fps": 25,
                 "quality": "medium"  # low, medium, high
             }
