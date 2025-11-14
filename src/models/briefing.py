@@ -39,6 +39,7 @@ class Briefing(Base):
     training_goal = Column(Text)  # Objetivo do treinamento/capacitação
     duration_minutes = Column(Integer)  # Duração desejada em minutos
     tone = Column(String(100))  # Ex: "formal", "prático", "inspiracional", "técnico"
+    video_orientation = Column(String(20), default="horizontal")  # "horizontal" (16:9) ou "vertical" (9:16)
     
     # Celery task
     task_id = Column(String(255))  # ID da task Celery para geração de opções

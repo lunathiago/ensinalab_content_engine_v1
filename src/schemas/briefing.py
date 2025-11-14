@@ -15,6 +15,15 @@ class BriefingCreate(BaseModel):
     training_goal: Optional[str] = Field(None, description="Objetivo do treinamento: ex. 'Melhorar gestão de sala', 'Técnicas de avaliação'")
     duration_minutes: Optional[int] = Field(None, ge=1, le=30, description="Duração desejada (1-30 min)")
     tone: Optional[str] = Field(None, description="Tom: 'formal', 'prático', 'inspiracional', 'técnico'")
+    video_orientation: Optional[str] = Field("horizontal", description="Orientação do vídeo: 'horizontal' (16:9) ou 'vertical' (9:16 para stories/reels)")
+    
+    @field_validator('video_orientation')
+    @classmethod
+    def validate_orientation(cls, v):
+        """Valida orientação do vídeo"""
+        if v and v.lower() not in ['horizontal', 'vertical']:
+            raise ValueError("video_orientation deve ser 'horizontal' ou 'vertical'")
+        return v.lower() if v else 'horizontal'
 
 class BriefingResponse(BaseModel):
     """Schema de resposta de briefing (IDs ofuscados para segurança)"""
@@ -27,6 +36,7 @@ class BriefingResponse(BaseModel):
     training_goal: Optional[str]
     duration_minutes: Optional[int]
     tone: Optional[str]
+    video_orientation: Optional[str]
     status: str
     created_at: datetime
     updated_at: Optional[datetime]

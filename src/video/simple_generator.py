@@ -242,10 +242,17 @@ class SimpleVideoGenerator(BaseVideoGenerator):
     ) -> str:
         """Cria slide visual com PIL"""
         
-        # Dimensões 16:9 HD (reduzido para economia de memória)
-        # Full HD (1920x1080) = ~6MB/slide
-        # HD (1280x720) = ~2.5MB/slide (60% menos memória!)
-        width, height = 1280, 720
+        # Determinar dimensões baseado na orientação
+        orientation = self.briefing_data.get('video_orientation', 'horizontal')
+        
+        if orientation == 'vertical':
+            # Vertical 9:16 (Stories/Reels/TikTok)
+            # HD vertical: 720x1280
+            width, height = 720, 1280
+        else:
+            # Horizontal 16:9 (YouTube/padrão)
+            # HD horizontal: 1280x720
+            width, height = 1280, 720
         
         # Criar imagem com gradiente
         img = Image.new('RGB', (width, height), color='#1a1a2e')
@@ -257,27 +264,46 @@ class SimpleVideoGenerator(BaseVideoGenerator):
             color = (26, 26, 46, opacity)
             # Simular gradiente com linhas
         
-        # Fontes
-        try:
-            title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 64)
-            content_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 42)
-            footer_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
-        except:
-            # Fallback para fonte padrão
-            title_font = ImageFont.load_default()
-            content_font = ImageFont.load_default()
-            footer_font = ImageFont.load_default()
+        # Fontes - ajustar tamanho baseado na orientação
+        if orientation == 'vertical':
+            # Fontes menores para vertical (720px de largura)
+            try:
+                title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
+                content_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 36)
+                footer_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
+            except:
+                title_font = ImageFont.load_default()
+                content_font = ImageFont.load_default()
+                footer_font = ImageFont.load_default()
+            
+            # Configurações para wrap de texto vertical
+            title_wrap_width = 20
+            content_wrap_width = 35
+        else:
+            # Fontes padrão para horizontal (1280px de largura)
+            try:
+                title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 64)
+                content_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 42)
+                footer_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
+            except:
+                title_font = ImageFont.load_default()
+                content_font = ImageFont.load_default()
+                footer_font = ImageFont.load_default()
+            
+            # Configurações para wrap de texto horizontal
+            title_wrap_width = 30
+            content_wrap_width = 55
         
         # Título (topo) com destaque
         if title:
             # Barra de destaque
             draw.rectangle([0, 100, width, 200], fill='#00d9ff')
             
-            wrapped_title = textwrap.fill(title, width=30)
+            wrapped_title = textwrap.fill(title, width=title_wrap_width)
             draw.text((width//2, 150), wrapped_title, fill='#1a1a2e', font=title_font, anchor='mm')
         
         # Conteúdo (centro)
-        wrapped_content = textwrap.fill(content[:500], width=55)  # Limitar tamanho
+        wrapped_content = textwrap.fill(content[:500], width=content_wrap_width)  # Limitar tamanho
         draw.text((width//2, height//2 + 50), wrapped_content, fill='#ffffff', font=content_font, anchor='mm')
         
         # Rodapé (número do slide + logo)
