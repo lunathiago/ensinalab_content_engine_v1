@@ -80,6 +80,28 @@ class VideoGeneratorConfig:
             Config do gerador recomendado
         """
         
+        # 🔧 FIX: Respeitar VIDEO_GENERATOR_TYPE se estiver definido
+        env_generator = os.getenv('VIDEO_GENERATOR_TYPE')
+        if env_generator and env_generator.lower() != 'auto':
+            # Variável de ambiente tem prioridade
+            default_tts = os.getenv('SIMPLE_GENERATOR_TTS_PROVIDER', 'elevenlabs')
+            provider_map = {
+                'simple': default_tts,
+                'shotstack': None,
+                'avatar': os.getenv('AVATAR_PROVIDER', 'heygen'),
+                'ai': os.getenv('AI_VIDEO_PROVIDER', 'kling')
+            }
+            return {
+                'generator_type': env_generator.lower(),
+                'provider': provider_map.get(env_generator.lower())
+            }
+        
+        # Se VIDEO_GENERATOR_TYPE=auto, usar Shotstack se disponível
+        if env_generator and env_generator.lower() == 'auto':
+            if os.getenv('SHOTSTACK_API_KEY'):
+                return {'generator_type': 'shotstack', 'provider': None}
+            # Senão, continua com lógica baseada no briefing
+        
         duration = briefing_data.get('duration_minutes', 10)
         tone = briefing_data.get('tone', 'profissional')
         subject = briefing_data.get('subject_area', '')
