@@ -33,10 +33,10 @@ if __name__ == "__main__":
         print("✅ Tabelas criadas com sucesso!")
         
         print("\n📋 Tabelas recriadas:")
-        print("  - users (com id, email, username, hashed_password, etc)")
-        print("  - briefings (com user_id, title, description, etc)")
-        print("  - options (com id, briefing_id, content, etc)")
-        print("  - videos (com id, option_id, status, etc)")
+        print("  - users (id, email, username, hashed_password, created_at)")
+        print("  - briefings (id, user_id, title, description, video_orientation, etc)")
+        print("  - options (id, briefing_id, title, summary, script_outline, etc)")
+        print("  - videos (id, option_id, title, file_path, status, etc)")
         
         print("\n" + "=" * 60)
         print("✅ RECREATE_TABLES.PY CONCLUÍDO COM SUCESSO!")
