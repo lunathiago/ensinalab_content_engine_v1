@@ -185,7 +185,8 @@ def generate_video(self, video_id: int, generator_type: str = None):
             'subject_area': briefing.subject_area,
             'duration_minutes': briefing.duration_minutes,
             'tone': briefing.tone,
-            'title': option.title
+            'title': option.title,
+            'video_orientation': briefing.video_orientation  # ✅ NOVO
         }
         
         # 🎯 Executar Video Generation State Machine com gerador escolhido

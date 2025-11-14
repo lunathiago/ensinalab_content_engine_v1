@@ -23,6 +23,7 @@ class BriefingService:
             training_goal=briefing_data.training_goal,
             duration_minutes=briefing_data.duration_minutes,
             tone=briefing_data.tone,
+            video_orientation=briefing_data.video_orientation,  # ✅ NOVO
             status=BriefingStatus.PENDING
         )
         
