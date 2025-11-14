@@ -174,7 +174,8 @@ class VideoGenerationWorkflow:
             metadata = {
                 'tone': state['briefing_data'].get('tone', 'profissional'),
                 'target_audience': state['briefing_data'].get('target_audience'),
-                'subject_area': state['briefing_data'].get('subject_area')
+                'subject_area': state['briefing_data'].get('subject_area'),
+                'video_orientation': state['briefing_data'].get('video_orientation', 'horizontal')
             }
             
             # Gerar vídeo usando factory

@@ -49,6 +49,9 @@ class SimpleVideoGenerator(BaseVideoGenerator):
         try:
             print(f"📹 [SimpleGenerator] Gerando vídeo {video_id}...")
             
+            # Armazenar metadata para uso nos métodos internos
+            self.metadata = metadata
+            
             # 1. Quebrar script em seções
             sections = self._parse_script_sections(script, title)
             print(f"   → {len(sections)} seções identificadas")
@@ -243,7 +246,7 @@ class SimpleVideoGenerator(BaseVideoGenerator):
         """Cria slide visual com PIL"""
         
         # Determinar dimensões baseado na orientação
-        orientation = self.briefing_data.get('video_orientation', 'horizontal')
+        orientation = getattr(self, 'metadata', {}).get('video_orientation', 'horizontal')
         
         if orientation == 'vertical':
             # Vertical 9:16 (Stories/Reels/TikTok)
