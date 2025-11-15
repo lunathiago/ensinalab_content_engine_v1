@@ -267,10 +267,9 @@ class ShotstackGenerator(BaseVideoGenerator):
         
         if storage.use_r2:
             try:
-                # Upload temporário para R2
-                import boto3
-                s3_client = storage.s3_client
-                bucket = storage.bucket_name
+                # Upload temporário para R2 (usar storage.client e storage.bucket)
+                s3_client = storage.client
+                bucket = storage.bucket
                 
                 key = f"temp/audio_{os.path.basename(audio_path)}"
                 s3_client.upload_file(audio_path, bucket, key)
@@ -282,7 +281,7 @@ class ShotstackGenerator(BaseVideoGenerator):
                     ExpiresIn=3600
                 )
                 
-                logger.info(f"   ✓ Áudio enviado para R2 (temp)")
+                logger.info(f"   ✓ Áudio enviado para R2 (temp): {key}")
                 return url
             except Exception as e:
                 logger.warning(f"   ⚠️ Falha no upload R2: {e}")
